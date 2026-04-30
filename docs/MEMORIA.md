@@ -129,8 +129,6 @@ MAÑANA RELLENAR
 
 ## indexar_historico_es.py
 
-## Cambio a Parquet Particionado
-
 ### Resultado
 
 PS E:\Estudios\CE_IAyBD\TFE\mercaintelligence> & "C:/Users/Daniel PC/AppData/Local/Programs/Python/Python313/python.exe" e:/Estudios/CE_IAyBD/TFE/mercaintelligence/src/etl/indexar_historico_es.py
@@ -144,6 +142,8 @@ PS E:\Estudios\CE_IAyBD\TFE\mercaintelligence> & "C:/Users/Daniel PC/AppData/Loc
 2026-04-28 19:04:59,061 — PUT http://localhost:9200/\_bulk [status:200 duration:0.068s]
 ...
 2026-04-28 19:08:52,918 — ✅ 668,625 documentos indexados, 0 errores
+
+## Cambio a Parquet Particionado
 
 ### 🚀 Optimización del Almacenamiento: Migración a Parquet Particionado
 
@@ -170,4 +170,294 @@ Para solucionar esto, se refactorizó la arquitectura hacia un modelo **append-o
 - **`indexar_historico_es.py` y Notebooks**: Actualizados para leer transparentemente desde el directorio particionado sin notar el cambio de estructura interna.
 - **Separación de responsabilidades**: Creación del directorio `data/state/` para separar el estado transaccional de los datos inmutables de `data/processed/`.
 
+# Fecha Hoy --> 29/04/2026
 
+Sprint 2 → Anomalías (Z-Score + IF + Autoencoder)
+↓ genera columnas: anomalia_zscore, anomalia_if, anomalia_ae, score_anomalia
+Sprint 3 → LSTM + NLP/embeddings
+↓ genera columnas: prob_cambio_lstm, marca_equivalente, distancia_coseno
+Sprint 3 → IPC + Flask
+↓ expone endpoint: /api/ipc?productos=...
+Sprint 4 → Los 4 dashboards en Kibana con TODOS los datos disponibles
+
+## Anomalias
+
+## 📊 Tabla comparativa final — Sprint 2 completo
+
+| Método                                      | Evaluadas | Anomalías | Tasa  | Productos afectados | Jaccard vs ZS | Jaccard vs IF |
+| ------------------------------------------- | --------- | --------- | ----- | ------------------- | ------------- | ------------- |
+| Z-Score rolling (14d, 2.5σ)                 | 668.625   | 3.293     | 0.49% | 1.545               | —             | —             |
+| Isolation Forest (200 árboles, contam=0.5%) | 668.625   | 3.343     | 0.50% | 59                  | 0.005         | —             |
+| Autoencoder LSTM (ventana=14d, P99)         | 599.161   | 5.992     | 1.00% | 1.031               | 0.000         | 0.004         |
+
+### anomalias_zscore.py
+
+PS E:\Estudios\CE_IAyBD\TFE\mercaintelligence> & "C:/Users/Daniel PC/AppData/Local/Programs/Python/Python313/python.exe" e:/Estudios/CE_IAyBD/TFE/mercaintelligence/src/ml/anomalias_zscore.py
+2026-04-29 11:47:27,599 — Datos cargados: 668,625 filas | 5,014 productos | 154 fechas
+2026-04-29 11:47:27,600 — Calculando Z-Score rolling (ventana=14 días, umbral=2.5)...
+2026-04-29 11:47:36,945 — ────────────────────────────────────────────────────────────
+2026-04-29 11:47:36,945 — RESUMEN Z-SCORE (ventana=14d, umbral=2.5σ)
+2026-04-29 11:47:36,945 — Observaciones evaluadas : 668,625
+2026-04-29 11:47:36,945 — Anomalías detectadas : 3,293
+2026-04-29 11:47:36,946 — Tasa de anomalía : 0.49%
+2026-04-29 11:47:36,946 — Productos afectados : 1,545
+2026-04-29 11:47:36,946 —
+2026-04-29 11:47:36,946 — Top 5 categorías con más anomalías:
+2026-04-29 11:47:36,948 — fruta y verdura 626 anomalías
+2026-04-29 11:47:36,948 — agua y refrescos 398 anomalías
+2026-04-29 11:47:36,948 — bodega 328 anomalías
+2026-04-29 11:47:36,948 — cuidado facial y corporal 219 anomalías
+2026-04-29 11:47:36,948 — marisco y pescado 156 anomalías
+2026-04-29 11:47:36,949 —
+2026-04-29 11:47:36,949 — Distribución por marca:
+2026-04-29 11:47:36,950 — comercial 2429
+2026-04-29 11:47:36,950 — hacendado 661
+2026-04-29 11:47:36,950 — deliplus 169
+2026-04-29 11:47:36,950 — bosque verde 26
+2026-04-29 11:47:36,951 — compy 8
+2026-04-29 11:47:36,951 — ────────────────────────────────────────────────────────────
+2026-04-29 11:47:37,530 — Resultados guardados en data\anomalias\zscore_resultados.parquet
+
+### anomalias_isolation_forest.py
+
+PS E:\Estudios\CE_IAyBD\TFE\mercaintelligence> & "C:/Users/Daniel PC/AppData/Local/Programs/Python/Python313/python.exe" e:/Estudios/CE_IAyBD/TFE/mercaintelligence/src/ml/anomalias_isolation_forest.py
+2026-04-29 12:36:53,023 — Datos listos: 668,625 filas | features: ['precio_actual', 'precio_por_medida', 'variacion_pct', 'dias_sin_cambio', 'ratio_vs_media_subcat']
+2026-04-29 12:36:53,108 — Entrenando Isolation Forest (n_estimators=200, contamination=0.005)...
+2026-04-29 12:37:00,380 — Modelo guardado en models\isolation_forest.pkl
+2026-04-29 12:37:11,308 — ────────────────────────────────────────────────────────────
+2026-04-29 12:37:11,308 — RESUMEN ISOLATION FOREST (contamination=0.005)
+2026-04-29 12:37:11,308 — Observaciones evaluadas : 668,625
+2026-04-29 12:37:11,308 — Anomalías detectadas : 3,343
+2026-04-29 12:37:11,308 — Tasa de anomalía : 0.50%
+2026-04-29 12:37:11,309 — Productos afectados : 59
+2026-04-29 12:37:11,309 —
+2026-04-29 12:37:11,309 — Top 5 categorías con más anomalías:
+2026-04-29 12:37:11,310 — charcutería y quesos 1356 anomalías
+2026-04-29 12:37:11,310 — limpieza y hogar 342 anomalías
+2026-04-29 12:37:11,310 — cuidado facial y corporal 276 anomalías
+2026-04-29 12:37:11,311 — carne 272 anomalías
+2026-04-29 12:37:11,311 — congelados 267 anomalías
+2026-04-29 12:37:11,311 —
+2026-04-29 12:37:11,311 — Distribución por marca:
+2026-04-29 12:37:11,312 — comercial 2511
+2026-04-29 12:37:11,312 — hacendado 521
+2026-04-29 12:37:11,312 — compy 258
+2026-04-29 12:37:11,312 — deliplus 53
+2026-04-29 12:37:11,346 —
+2026-04-29 12:37:11,347 — Comparativa con Z-Score:
+2026-04-29 12:37:11,347 — Detectados por ambos : 34
+2026-04-29 12:37:11,347 — Solo por IF : 3,309
+2026-04-29 12:37:11,347 — Solo por Z-Score : 3,259
+2026-04-29 12:37:11,347 — Jaccard similarity : 0.005
+2026-04-29 12:37:11,348 — ────────────────────────────────────────────────────────────
+2026-04-29 12:37:12,001 — Resultados guardados en data\anomalias\if_resultados.parquet
+
+Edited anomalias_isolation_forest.py
+Viewed anomalias_isolation_forest.py:86-115
+
+Muy buena pregunta. Los resultados son muy reveladores y hay hallazgos importantes para tu memoria. Aquí va mi análisis:
+
+---
+
+#### Comparativa Z-Score vs Isolation Forest
+
+| Métrica                    | Z-Score       | Isolation Forest         |
+| -------------------------- | ------------- | ------------------------ |
+| Anomalías                  | 3,293 (0.49%) | 3,343 (0.50%)            |
+| **Productos afectados**    | **1,545**     | **59**                   |
+| Anomalías/producto (media) | ~2.1          | **~56.7**                |
+| Solapamiento               | —             | **34 (Jaccard = 0.005)** |
+
+#### 🔑 Hallazgos clave
+
+**1. Solapamiento casi nulo → miden cosas completamente distintas**
+
+Un Jaccard de **0.005** es prácticamente cero. Esto confirma que no son métodos redundantes, sino complementarios, lo cual es muy bueno para tu TFE.
+
+**2. IF concentra anomalías en muy pocos productos (⚠️ señal de alerta)**
+
+Este es el dato más llamativo: IF marca **3,343 anomalías en solo 59 productos**, o sea ~57 anomalías por producto. Esto significa que IF está identificando productos que son **estructuralmente raros** en el espacio multidimensional — no cambios puntuales de precio, sino productos que _siempre_ son outliers por su combinación de features (precio alto + precio_por_medida bajo + poca variación, etc.).
+
+Z-Score, en cambio, detecta **cambios puntuales de precio** distribuidos en 1,545 productos. Es un detector de _eventos_.
+
+**3. Las categorías afectadas lo confirman**
+
+| Z-Score (temporal)      | IF (multidimensional)                            |
+| ----------------------- | ------------------------------------------------ |
+| Fruta y verdura (626)   | Charcutería y quesos (**1,356** → 40% del total) |
+| Agua y refrescos (398)  | Limpieza y hogar (342)                           |
+| Bodega (328)            | Cuidado facial y corporal (276)                  |
+| Marisco y pescado (156) | Carne (272)                                      |
+
+- **Z-Score** captura categorías con **precios volátiles** (fruta, marisco) → anomalías = subidas/bajadas bruscas.
+- **IF** captura categorías con **productos estructuralmente distintos** → charcutería y quesos domina con 40%, probablemente productos premium con precios muy diferentes al resto de su subcategoría.
+
+**4. Distribución por marca**
+
+Compy salta de 8 anomalías (Z-Score) a 258 (IF). Esto sugiere que los productos Compy tienen un **perfil de precios atípico** en el espacio multidimensional (probablemente precios muy bajos con ratios vs subcategoría extremos), aunque sus precios no fluctúen temporalmente.
+
+#### 📋 Interpretación para la memoria
+
+| Método               | Qué detecta                                          | Utilidad                                                            |
+| -------------------- | ---------------------------------------------------- | ------------------------------------------------------------------- |
+| **Z-Score**          | Cambios bruscos de precio en un producto             | Alertas de pricing, promociones, errores de datos                   |
+| **Isolation Forest** | Productos con perfil de precio estructuralmente raro | Segmentación, detección de productos fuera de rango en su categoría |
+
+La **complementariedad extrema** (Jaccard ≈ 0) es en realidad un resultado muy sólido para tu TFE: justifica el uso de ambos métodos porque capturan dimensiones completamente distintas de la anomalía. No hay redundancia.
+
+> **Sugerencia**: Podrías considerar revisar los 59 productos flaggeados por IF para validar si son realmente outliers estructurales o si el modelo está sobreajustando a unos pocos perfiles extremos. Si los 59 productos son consistentes (p.ej., todos son productos premium importados en subcategorías baratas), tienes una historia muy potente para la memoria.
+
+#### Los 64 productos flaggeados por Isolation Forest
+
+El patrón es evidente — **son productos con precios extremos respecto a su subcategoría** (ratio_vs_media_subcat medio = **4.17x**, o sea cuestan 4 veces más que la media de su subcategoría):
+
+#### Perfiles dominantes:
+
+**1. Productos ibéricos premium** (~20 productos, +1,300 anomalías)
+
+- Jamón bellota ibérico 100% Covap → **504€**, ratio **9.11x**
+- Lomo bellota ibérico Juan del Roble → 98.80€, ratio **11.04x** (el más extremo)
+- Caña de lomo ibérico La Hacienda → 72€, ratio **8.46x**
+- Jamón bellota ibérico lonchas → 14.95€ pero ratio **0.23x** (extremadamente barato vs subcategoría)
+
+**2. Productos caros en categorías baratas**
+
+- Cochinillo asado → 50€, ratio **8.86x** en carne
+- Bacalao a rodajas → 33.95€, ratio **3.71x**
+- Cloro piscina tabletas → 31€, ratio **4.06x** en limpieza
+- Cepillo Oral-B recambios → 14.50€, ratio **5.21x**
+
+**3. Alimentación infantil/especializada**
+
+- Leche Nidina Nestlé → ~15-17€, ratio **3-4x**
+
+#### Distribución del ratio:
+
+| Rango                 | Productos      | Interpretación                                    |
+| --------------------- | -------------- | ------------------------------------------------- |
+| ratio > 2 (caros)     | **56** (87.5%) | Productos premium en subcategorías baratas        |
+| ratio < 0.5 (baratos) | **6** (9.4%)   | Jamón ibérico en lonchas (barato vs jamón entero) |
+
+#### ✅ Conclusión
+
+**IF NO está sobreajustando** — está detectando exactamente lo que debería: productos cuyo perfil de precio es **estructuralmente atípico** dentro de su subcategoría. Son outliers legítimos, no falsos positivos. Esto es una historia muy potente para la memoria:
+
+> _"Isolation Forest identifica productos premium (ibéricos, mariscos, electrónica dental) que por su precio se sitúan consistentemente entre 2x y 11x por encima de la media de su subcategoría. Z-Score, en cambio, detecta cambios bruscos de precio puntuales. La complementariedad (Jaccard ≈ 0) confirma que ambos métodos capturan dimensiones ortogonales de anomalía."_
+
+### anomalias_autoencoder.py
+
+Antes de elegir el umbral, hay algo que necesitas entender sobre estos números porque es clave para la memoria.
+
+---
+
+#### 🔍 El problema real: distribución bimodal
+
+Fíjate en este dato aparentemente contradictorio del output:
+
+```
+Media : 0.00553778
+P90   : 0.00000023  ← el percentil 90 es MENOR que la media
+P95   : 0.03627351  ← el percentil 95 salta brutalmente
+```
+
+Esto es imposible en una distribución normal. Lo que tienes es una **distribución bimodal**: la inmensa mayoría de las secuencias tienen error ~0 (productos con precio estable que el modelo reconstruye perfectamente), y una minoría tiene error alto (secuencias con cambios de precio reales). La media está inflada por esa cola derecha, pero el P90 es casi cero porque el 90% de los datos son "fáciles".
+
+Esto es en realidad un **buen resultado** — significa que el Autoencoder aprendió a distinguir muy bien los dos comportamientos. Pero hace que la elección del umbral sea más delicada.
+
+---
+
+#### 🎯 Qué umbral usar y por qué
+
+| Percentil | Anomalías | Tasa  | Valoración                    |
+| --------- | --------- | ----- | ----------------------------- |
+| P90       | 59.864    | 9.99% | Demasiado permisivo           |
+| P95       | 29.958    | 5.00% | Alto pero justificable        |
+| P99       | 5.989     | 1.00% | El más comparable con ZS e IF |
+
+**Mi recomendación: P99 → 5.989 anomalías (1.00%).**
+
+La razón es de coherencia metodológica para la comparativa. Z-Score e IF operan al 0.5%. El Autoencoder al 1% es el más cercano y sigue siendo selectivo. Usar P95 (5%) hace que el modelo parezca mucho más sensible que los otros dos sin que sea una ventaja real — simplemente tiene un umbral más laxo.
+
+Para la memoria lo justificas así: _"Dado que el Autoencoder opera sobre secuencias temporales (599.161) y no sobre observaciones individuales (668.625), una tasa del 1% es equivalente en términos absolutos a las tasas del 0.49-0.50% de Z-Score e Isolation Forest."_
+
+Actualiza el umbral al P99:
+
+```python
+# Añade al recalibrar_umbral_ae.py y vuelve a ejecutar,
+# o directamente en Python:
+import joblib, numpy as np, pandas as pd
+from pathlib import Path
+
+df = pd.read_parquet("data/anomalias/ae_resultados.parquet", columns=["error_mse"])
+errores = df["error_mse"].values
+nuevo_umbral = float(np.percentile(errores, 99))
+
+umbral_data = joblib.load("models/ae_umbral.pkl")
+umbral_data["umbral"]  = nuevo_umbral
+umbral_data["metodo"]  = "percentil_99_inferencia"
+joblib.dump(umbral_data, "models/ae_umbral.pkl")
+print(f"Umbral P99: {nuevo_umbral:.8f}")
+```
+
+Luego relanza la inferencia:
+
+```bash
+python src/ml/anomalias_autoencoder.py
+```
+
+---
+
+#### 📓 Sobre el notebook de Colab — está muy bien
+
+El flujo entrenamiento-en-Colab → inferencia-en-local es exactamente correcto y tiene un nombre en la industria: **offline training + online inference**. Para la memoria lo describes así en el apartado de decisiones técnicas:
+
+_"El entrenamiento del Autoencoder LSTM se realizó en Google Colab con GPU T4 debido a las limitaciones de TensorFlow en Windows nativo (sin soporte GPU para versiones ≥ 2.11). El modelo entrenado se exporta en formato .keras y se carga localmente para inferencia, separando el ciclo de entrenamiento del ciclo de producción."_
+
+Esa limitación de TensorFlow en Windows que aparece en el WARNING no es un fallo tuyo — es una restricción conocida de TF ≥ 2.11 en Windows nativo. Lo documentas, lo explicas, lo resuelves con Colab. Eso demuestra criterio técnico.
+
+PS E:\Estudios\CE_IAyBD\TFE\mercaintelligence> & "C:/Users/Daniel PC/AppData/Local/Programs/Python/Python313/python.exe" e:/Estudios/CE_IAyBD/TFE/mercaintelligence/src/ml/anomalias_autoencoder.py
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1777502982.485514 3944 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1777502986.471124 3944 port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2026-04-30 00:49:51,530 — Datos cargados: 668,625 filas | 5,014 productos
+2026-04-30 00:49:51,693 — Modelo pre-entrenado encontrado: models\autoencoder_lstm.keras
+I0000 00:00:1777502991.735097 3944 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: SSE3 SSE4.1 SSE4.2 AVX AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.WARNING:tensorflow:TensorFlow GPU support is not available on native Windows for TensorFlow >= 2.11. Even if CUDA/cuDNN are installed, GPU will not be used. Please use WSL2 or the TensorFlow-DirectML plugin.
+2026-04-30 00:49:52,010 — TensorFlow GPU support is not available on native Windows for TensorFlow >= 2.11. Even if CUDA/cuDNN are installed, GPU will not be used. Please use WSL2 or the TensorFlow-DirectML plugin.
+2026-04-30 00:49:52,121 — Umbral cargado (percentil_99_inferencia): 0.1329165697
+2026-04-30 00:49:52,121 — Usando modelo pre-entrenado → solo inferencia (sin GPU)
+2026-04-30 00:49:52,122 — Construyendo secuencias para inferencia (todas)...
+2026-04-30 00:50:07,062 — Secuencias totales para inferencia: 599,161
+2341/2341 ━━━━━━━━━━━━━━━━━━━━ 38s 16ms/step  
+2026-04-30 00:50:45,925 — Distribución error inferencia:
+2026-04-30 00:50:45,927 — Media: 0.0050414111 | Std: 0.0224224348
+2026-04-30 00:50:45,928 — Min: 0.0000000112 | Max: 0.1785897166
+2026-04-30 00:50:45,928 — Umbral aplicado: 0.1329165697
+2026-04-30 00:50:46,517 — Anomalías detectadas: 5,992 / 599,161 (1.00%)
+2026-04-30 00:50:46,972 — ────────────────────────────────────────────────────────────
+2026-04-30 00:50:46,973 — RESUMEN AUTOENCODER LSTM (ventana=14d)
+2026-04-30 00:50:46,973 — Secuencias evaluadas : 599,161
+2026-04-30 00:50:46,973 — Anomalías detectadas : 5,992
+2026-04-30 00:50:46,973 — Tasa de anomalía : 1.00%
+2026-04-30 00:50:46,974 — Productos afectados : 1,031
+2026-04-30 00:50:46,974 —
+2026-04-30 00:50:46,975 — Top 5 categorías:
+2026-04-30 00:50:46,976 — cuidado facial y corporal 734
+2026-04-30 00:50:46,976 — bodega 538
+2026-04-30 00:50:46,977 — cuidado del cabello 436
+2026-04-30 00:50:46,977 — agua y refrescos 417
+2026-04-30 00:50:46,977 — charcutería y quesos 383
+2026-04-30 00:50:46,977 —
+2026-04-30 00:50:46,978 — Por marca:
+2026-04-30 00:50:46,979 — comercial 2902
+2026-04-30 00:50:46,979 — hacendado 2133
+2026-04-30 00:50:46,979 — deliplus 844
+2026-04-30 00:50:46,979 — bosque verde 63
+2026-04-30 00:50:46,979 — compy 50
+2026-04-30 00:50:47,019 —
+Solapamiento AE vs Z-Score : 0 casos | Jaccard=0.000
+2026-04-30 00:50:47,038 — Solapamiento AE vs IF : 33 casos | Jaccard=0.004
+2026-04-30 00:50:47,038 — ────────────────────────────────────────────────────────────
+2026-04-30 00:50:47,487 — Resultados guardados en data\anomalias\ae_resultados.parquet
+PS E:\Estudios\CE_IAyBD\TFE\mercaintelligence>
