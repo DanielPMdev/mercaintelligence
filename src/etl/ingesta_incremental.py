@@ -1,7 +1,7 @@
 """
 ingesta_incremental.py
 
-Modo desarrollo : python ingesta_incremental.py --csv <ruta_al_csv>
+Modo desarrollo : python ingesta_incremental.py --csv <ruta_al_csv> <ruta_al_csv2>
 Modo producción : python ingesta_incremental.py --watch
                   (vigilará la carpeta del runner y procesará cada CSV nuevo)
 """
@@ -125,9 +125,9 @@ def calcular_features(nuevo: pd.DataFrame) -> pd.DataFrame:
     variacion_pct y dias_sin_cambio.
     Lee desde la tabla auxiliar ultimo_precio.parquet (O(1), no todo el histórico).
     """
-    assert pd.api.types.is_datetime64_any_dtype(
-        nuevo["fecha"]
-    ), "fecha debe ser datetime antes de calcular_features"
+    assert pd.api.types.is_datetime64_any_dtype(nuevo["fecha"]), (
+        "fecha debe ser datetime antes de calcular_features"
+    )
 
     ultimo = obtener_ultimo_precio()
 
@@ -137,6 +137,9 @@ def calcular_features(nuevo: pd.DataFrame) -> pd.DataFrame:
         return nuevo
 
     nuevo = nuevo.merge(ultimo, on="referencia", how="left")
+
+    # Aseguramos que fecha_previo sea datetime por si viene como string desde el parquet
+    nuevo["fecha_previo"] = pd.to_datetime(nuevo["fecha_previo"])
 
     nuevo["variacion_pct"] = (
         (nuevo["precio_actual"] - nuevo["precio_previo"]) / nuevo["precio_previo"] * 100
@@ -226,7 +229,9 @@ class NuevoCSVHandler(FileSystemEventHandler):
 # ── Entrypoint ────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--csv", help="Procesar un CSV concreto (modo desarrollo)")
+    parser.add_argument(
+        "--csv", nargs="+", help="Procesar uno o varios CSV (modo desarrollo)"
+    )
     parser.add_argument(
         "--watch",
         action="store_true",
@@ -236,7 +241,8 @@ if __name__ == "__main__":
 
     if args.csv:
         # Modo desarrollo: procesar manualmente un CSV
-        procesar_csv(args.csv)
+        for archivo in args.csv:
+            procesar_csv(archivo)
 
     elif args.watch:
         # Modo producción: vigilar carpeta indefinidamente

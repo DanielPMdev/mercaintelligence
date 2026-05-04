@@ -461,3 +461,32 @@ Solapamiento AE vs Z-Score : 0 casos | Jaccard=0.000
 2026-04-30 00:50:47,038 — ────────────────────────────────────────────────────────────
 2026-04-30 00:50:47,487 — Resultados guardados en data\anomalias\ae_resultados.parquet
 PS E:\Estudios\CE_IAyBD\TFE\mercaintelligence>
+
+# Fecha Hoy --> 04/05/2026
+
+### indexar_anomalias_es.py
+
+zscore          → valor numérico del z-score (positivo = subida, negativo = bajada)
+anomalia_zscore → true/false
+media_local     → media rolling de 14 días (para el dashboard)
+std_local       → desviación típica rolling
+score_if        → score normalizado [0,1] de Isolation Forest
+anomalia_if     → true/false
+score_ae        → score normalizado [0,1] del Autoencoder
+error_mse       → error de reconstrucción raw (para histograma)
+anomalia_ae     → true/false
+
+
+#### Resultado
+
+2026-05-04 18:57:38,202 — VERIFICACIÓN EN ELASTICSEARCH
+2026-05-04 18:57:38,226 — POST http://localhost:9200/mercadona-precios/_count [status:200 duration:0.023s]
+2026-05-04 18:57:38,232 — POST http://localhost:9200/mercadona-precios/_count [status:200 duration:0.006s]
+2026-05-04 18:57:38,232 —   anomalia_zscore        →  668,625 docs con campo |  3,293 anomalías (True)
+2026-05-04 18:57:38,255 — POST http://localhost:9200/mercadona-precios/_count [status:200 duration:0.023s]
+2026-05-04 18:57:38,261 — POST http://localhost:9200/mercadona-precios/_count [status:200 duration:0.006s]
+2026-05-04 18:57:38,261 —   anomalia_if            →  668,625 docs con campo |  3,343 anomalías (True)
+2026-05-04 18:57:38,286 — POST http://localhost:9200/mercadona-precios/_count [status:200 duration:0.024s]
+2026-05-04 18:57:38,291 — POST http://localhost:9200/mercadona-precios/_count [status:200 duration:0.005s]
+2026-05-04 18:57:38,292 —   anomalia_ae            →  599,161 docs con campo |  5,992 anomalías (True)
+2026-05-04 18:57:38,292 — ───────────────────────────────────────────────────────

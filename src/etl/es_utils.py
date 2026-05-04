@@ -8,9 +8,26 @@ log = logging.getLogger(__name__)
 
 ES_INDEX = "mercadona-precios"
 
+
+# ── Helpers ────────────────────────────────────────────────────────────────
+def to_native(val):
+    """Convierte tipos numpy/pandas a tipos nativos de Python para serialización."""
+    if hasattr(val, "item"):
+        return val.item()
+    return val
+
+
+def generar_doc_id(referencia, fecha_str: str) -> str:
+    """ID determinístico {referencia}_{fecha} para evitar duplicados en ES."""
+    return f"{int(referencia)}_{fecha_str[:10]}"
+
+
 # ── Cliente ────────────────────────────────────────────────────────────────
 def get_es_client():
-    return Elasticsearch("http://localhost:9200")
+    es = Elasticsearch("http://localhost:9200")
+    if not es.ping():
+        raise ConnectionError("Elasticsearch no disponible en localhost:9200")
+    return es
 
 
 # ── Mapping ────────────────────────────────────────────────────────────────
@@ -52,8 +69,8 @@ def generar_docs(df):
     for _, row in df.iterrows():
         doc = row.dropna().to_dict()
 
-        # Convertir numpy types
-        doc = {k: (v.item() if hasattr(v, "item") else v) for k, v in doc.items()}
+        # Convertir numpy types a nativos de Python
+        doc = {k: to_native(v) for k, v in doc.items()}
 
         # Fechas → ISO
         for campo in ["fecha", "timestamp"]:
@@ -61,7 +78,7 @@ def generar_docs(df):
                 doc[campo] = doc[campo].isoformat()
 
         # ⚠️ ID determinístico → evita duplicados
-        doc_id = f"{doc.get('referencia')}_{doc.get('fecha')[:10]}"
+        doc_id = generar_doc_id(doc.get("referencia"), doc.get("fecha"))
 
         yield {
             "_index": ES_INDEX,
