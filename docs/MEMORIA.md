@@ -490,3 +490,32 @@ anomalia_ae     → true/false
 2026-05-04 18:57:38,291 — POST http://localhost:9200/mercadona-precios/_count [status:200 duration:0.005s]
 2026-05-04 18:57:38,292 —   anomalia_ae            →  599,161 docs con campo |  5,992 anomalías (True)
 2026-05-04 18:57:38,292 — ───────────────────────────────────────────────────────
+
+# Fecha Hoy --> 04/05/2026
+
+### lstm_clasificador_colab.ipynb
+
+#### 1. Objetivo y Diseño Experimental
+El objetivo de este modelo es predecir de forma temprana si un producto sufrirá un cambio de precio (subida o bajada) en los próximos 7 días, basándose en una ventana histórica de los últimos 14 días. Nos enfrentamos a un problema de series temporales con un **desbalanceo extremo** (aproximadamente el 95% de los días no hay cambios de precio).
+
+Para garantizar el rigor científico y evitar el *data leakage* (fuga de información del futuro al pasado), se implementó un **split temporal estricto de 3 vías**:
+- **Train (70%)**: Para el aprendizaje de la red, aplicando `class_weight` para penalizar los errores en la clase minoritaria.
+- **Validación (15%)**: Para la monitorización del *Early Stopping* y la optimización de hiperparámetros.
+- **Test (15%)**: Para la evaluación final y aislada del rendimiento.
+
+#### 2. Optimización Analítica del Umbral (Threshold)
+Debido a la compensación de pesos introducida durante el entrenamiento, las probabilidades de salida de la red pierden su calibración estándar (donde `0.5` marca la frontera geométrica). Para que el modelo fuera utilizable en un entorno de negocio (evitando inundar el sistema de falsas alarmas), se generó una **Curva Precision-Recall** sobre el conjunto de validación.
+A partir de esta curva, se extrajo matemáticamente el *Threshold Óptimo* que **maximiza el F1-Score**. Este umbral calibrado fue el que se aplicó finalmente a las inferencias del conjunto de Test.
+
+#### 3. Resultados y Comparativa vs Baseline
+Se comparó el modelo de Deep Learning (LSTM) con un *Baseline* lineal (Regresión Logística). Ambos modelos fueron evaluados con sus respectivos umbrales óptimos calculados bajo la misma metodología.
+
+| Modelo | Precision | Recall | F1-score | AUC-ROC |
+| :--- | :---: | :---: | :---: | :---: |
+| **LSTM** | **0.334** | **0.660** | **0.443** | **0.915** |
+| Regresión Logística (baseline) | 0.388 | 0.324 | 0.353 | 0.755 |
+
+**Conclusiones de la Evaluación:**
+1. **Superioridad de la Arquitectura Recurrente**: El LSTM logra un AUC-ROC de **0.915** frente al 0.755 del modelo lineal, confirmando que la red es capaz de extraer patrones de las secuencias temporales que pasan desapercibidos al aplanar los datos.
+2. **Equilibrio Operativo (Precision-Recall)**: Gracias a la optimización del umbral, el LSTM alcanza una Precisión del **33.4%** (1 de cada 3 alertas es un cambio real) reteniendo un Recall del **66.0%** (detecta 2 de cada 3 cambios). El modelo Baseline, por el contrario, colapsa en su Recall (32.4%), ignorando la gran mayoría de los eventos.
+3. **Impacto de Negocio**: Se generaron y guardaron predicciones probabilísticas para más de 590,000 secuencias históricas. El modelo actual se erige como una herramienta equilibrada y accionable para inteligencia competitiva, permitiendo anticipar los movimientos de la competencia sin sobrecargar de "ruido" a los analistas.
