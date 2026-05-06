@@ -25,6 +25,7 @@ Ventaja sobre Z-Score:
 import pandas as pd
 import logging
 import joblib
+import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
@@ -37,6 +38,9 @@ PARTITIONED_DIR = Path("data/processed")
 ZSCORE_PATH = Path("data/anomalias/zscore_resultados.parquet")
 OUTPUT_PATH = Path("data/anomalias/if_resultados.parquet")
 MODEL_PATH = Path("models/isolation_forest.pkl")
+IMG_DIR = Path("docs/img/isolation_forest")
+
+IMG_DIR.mkdir(parents=True, exist_ok=True)
 
 # Contamination: fracción esperada de anomalías en el dataset.
 # Usamos 0.005 (0.5%) para alinearnos con la tasa observada en Z-Score.
@@ -245,6 +249,42 @@ def resumir(df: pd.DataFrame) -> None:
     log.info("─" * 60)
 
 
+def generar_visualizaciones(df: pd.DataFrame) -> None:
+    """Genera gráficas diagnósticas del modelo Isolation Forest."""
+    # 1. Histograma de Anomaly Scores
+    plt.figure(figsize=(10, 5))
+    plt.hist(df["score_if"], bins=100, color="forestgreen", alpha=0.7, edgecolor="white")
+    # El umbral real es implícito, pero marcamos el P99.5 aprox (contamination=0.005)
+    umbral_aprox = df["score_if"].quantile(1 - CONTAMINATION)
+    plt.axvline(umbral_aprox, color="red", linestyle="--", label=f"Umbral aprox (P{100-CONTAMINATION*100})")
+    plt.title("Distribución de Scores de Anomalía (Isolation Forest)")
+    plt.xlabel("Score (0 = normal, 1 = anómalo)")
+    plt.ylabel("Frecuencia")
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / "if_score_distribucion.png", dpi=150)
+    plt.close()
+
+    # 2. Análisis de features: Normal vs Anomalía
+    # Mostramos cómo cambian las features en los casos anómalos
+    fig, axes = plt.subplots(1, len(FEATURES), figsize=(20, 5))
+    for i, col in enumerate(FEATURES):
+        data = [df[~df["anomalia_if"]][col], df[df["anomalia_if"]][col]]
+        axes[i].boxplot(data, labels=["Normal", "Anomalía"], patch_artist=True,
+                        boxprops=dict(facecolor="lightgrey"),
+                        medianprops=dict(color="red"))
+        axes[i].set_title(col)
+        axes[i].grid(True, alpha=0.3)
+    
+    plt.suptitle("Comparativa de Características: Normal vs Anomalía")
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.savefig(IMG_DIR / "if_feature_comparison.png", dpi=150)
+    plt.close()
+
+    log.info(f"Gráficas guardadas en {IMG_DIR}")
+
+
 # ── Guardar resultados ────────────────────────────────────────────────────────
 def guardar(df: pd.DataFrame) -> None:
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -273,6 +313,7 @@ def ejecutar():
     modelo, scaler, X_scaled = entrenar_if(df)
     df = predecir(df, modelo, scaler, X_scaled)
     resumir(df)
+    generar_visualizaciones(df)
     guardar(df)
     return df
 

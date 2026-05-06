@@ -1,3 +1,18 @@
+# Custom Project Patterns (mercaintelligence)
+_pyrefly_virtual_/
+
+# Data files
+data/
+
+# Models
+models/
+*.h5
+*.pkl
+*.joblib
+*.onnx
+*.pth
+
+#----------------------------------------------------------------
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -133,27 +148,9 @@ cython_debug/
 .vscode/
 
 # Local configuration file (templates should be committed)
-.env
 .env.*
 config.yaml
 secrets.yaml
-
-# Custom Project Patterns (mercaintelligence)
-# Data files
-data/raw/
-data/processed/
-*.csv
-*.xlsx
-*.parquet
-*.jsonl
-
-# Models
-models/
-*.h5
-*.pkl
-*.joblib
-*.onnx
-*.pth
 
 # OS files
 .DS_Store

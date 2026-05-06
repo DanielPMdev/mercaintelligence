@@ -25,9 +25,11 @@ Por qué similitud coseno y no distancia euclidiana:
 import pandas as pd
 import numpy as np
 import logging
+import matplotlib.pyplot as plt
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.manifold import TSNE
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s — %(message)s")
 log = logging.getLogger(__name__)
@@ -36,9 +38,13 @@ log = logging.getLogger(__name__)
 PARTITIONED_DIR = Path("data/processed")
 OUTPUT_EQUIV = Path("data/nlp/equivalencias.parquet")
 OUTPUT_EMBEDDINGS = Path("data/nlp/embeddings.parquet")
+IMG_DIR = Path("docs/img/nlp")
+
+IMG_DIR.mkdir(parents=True, exist_ok=True)
 MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 TOP_K = 3  # top-3 equivalentes por producto de marca propia
 UMBRAL_SIMILITUD = 0.75  # similitud mínima para considerar equivalencia válida
+MIN_COMERCIALES = 3  # mínimo de productos comerciales por subcategoría
 
 MARCAS_PROPIAS = ["hacendado", "bosque verde", "deliplus", "compy"]
 
@@ -64,7 +70,7 @@ def cargar_catalogo() -> pd.DataFrame:
             "unidad_medida",
         ],
     )
-    df["fecha"] = pd.to_datetime(df["fecha"])
+    df["fecha"] = pd.to_datetime(df["fecha"].astype(str), errors="coerce")
 
     # Solo la última fecha — catálogo más reciente
     ultima_fecha = df["fecha"].max()
@@ -130,10 +136,8 @@ def encontrar_equivalencias(df: pd.DataFrame, embeddings: np.ndarray) -> pd.Data
     df = df.reset_index(drop=True)
     resultados = []
 
-    marcas_propias_df = df[df["es_marca_propia"]].copy()
-    comerciales_df = df[~df["es_marca_propia"]].copy()
-
-    subcategorias = marcas_propias_df["subcategoria"].unique()
+    # Obtenemos las subcategorías donde hay presencia de marca propia
+    subcategorias = df[df["es_marca_propia"]]["subcategoria"].unique()
     log.info(f"Buscando equivalencias en {len(subcategorias)} subcategorías...")
 
     for subcat in subcategorias:
@@ -144,8 +148,11 @@ def encontrar_equivalencias(df: pd.DataFrame, embeddings: np.ndarray) -> pd.Data
         idx_mp = df[mask_mp].index.tolist()
         idx_com = df[mask_com].index.tolist()
 
-        # Necesitamos al menos 1 de cada tipo para comparar
-        if not idx_mp or not idx_com:
+        # Necesitamos suficientes productos comerciales para comparar.
+        # Con < 3 comerciales, todos los MP se emparejan con el mismo
+        # producto (ej: todos los helados → "cucurucho fresa nata"),
+        # generando equivalencias no funcionales.
+        if not idx_mp or len(idx_com) < MIN_COMERCIALES:
             continue
 
         emb_mp = embeddings[idx_mp]  # (n_mp, 384)
@@ -170,6 +177,14 @@ def encontrar_equivalencias(df: pd.DataFrame, embeddings: np.ndarray) -> pd.Data
                 idx_c = idx_com[j]
                 producto_com = df.loc[idx_c]
 
+                # Precios por unidad de medida (€/kg, €/L)
+                pm_mp = producto_mp["precio_por_medida"]
+                pm_com = producto_com["precio_por_medida"]
+                um_mp = producto_mp["unidad_medida"]
+                um_com = producto_com["unidad_medida"]
+                tiene_medida = pd.notna(pm_mp) and pd.notna(pm_com)
+                misma_unidad = tiene_medida and (um_mp == um_com)
+
                 resultados.append(
                     {
                         # Producto marca propia
@@ -177,17 +192,20 @@ def encontrar_equivalencias(df: pd.DataFrame, embeddings: np.ndarray) -> pd.Data
                         "titulo_mp": producto_mp["titulo"],
                         "marca_mp": producto_mp["marca_propia"],
                         "precio_mp": producto_mp["precio_actual"],
-                        "precio_medida_mp": producto_mp["precio_por_medida"],
+                        "precio_medida_mp": pm_mp,
+                        "unidad_medida_mp": um_mp,
                         # Producto comercial equivalente
                         "ref_com": producto_com["referencia"],
                         "titulo_com": producto_com["titulo"],
                         "precio_com": producto_com["precio_actual"],
-                        "precio_medida_com": producto_com["precio_por_medida"],
+                        "precio_medida_com": pm_com,
+                        "unidad_medida_com": um_com,
                         # Métricas de comparación
                         "subcategoria": subcat,
                         "similitud": round(float(sim), 4),
                         "rank": rank + 1,
-                        # Diferencia de precio — el insight económico
+                        "misma_unidad": misma_unidad,
+                        # Diferencia de precio absoluto (secundaria)
                         "diferencia_precio": round(
                             producto_com["precio_actual"]
                             - producto_mp["precio_actual"],
@@ -202,15 +220,15 @@ def encontrar_equivalencias(df: pd.DataFrame, embeddings: np.ndarray) -> pd.Data
                             * 100,
                             2,
                         ),
-                        "diferencia_por_medida": round(
-                            (
-                                producto_com["precio_por_medida"]
-                                - producto_mp["precio_por_medida"]
-                            ),
-                            4,
+                        # Diferencia por unidad de medida (métrica principal)
+                        # Solo comparable cuando ambos usan la misma unidad
+                        "diferencia_por_medida": round(pm_com - pm_mp, 4)
+                        if misma_unidad
+                        else None,
+                        "diferencia_por_medida_pct": round(
+                            (pm_com - pm_mp) / pm_mp * 100, 2
                         )
-                        if pd.notna(producto_mp["precio_por_medida"])
-                        and pd.notna(producto_com["precio_por_medida"])
+                        if misma_unidad and pm_mp > 0
                         else None,
                     }
                 )
@@ -232,23 +250,53 @@ def resumir(equiv: pd.DataFrame) -> None:
     log.info(f"  Similitud mínima  : {top1['similitud'].min():.3f}")
     log.info("")
 
-    # Diferencia de precio — el hallazgo económico principal
-    top1_precio = top1.dropna(subset=["diferencia_precio"])
-    log.info(f"  Precio medio marca propia  : {top1_precio['precio_mp'].mean():.2f}€")
-    log.info(f"  Precio medio comercial     : {top1_precio['precio_com'].mean():.2f}€")
+    # ── Métrica principal: precio por unidad de medida (€/kg, €/L) ──
+    # Solo pares con la MISMA unidad de medida — evita comparar
+    # €/ud con €/L (ej: toallitas vs líquido → +23100% absurdo)
+    top1_medida = top1[
+        top1["misma_unidad"] & top1["diferencia_por_medida_pct"].notna()
+    ].copy()
+    n_comparables = len(top1_medida)
+    n_excluidos = len(top1) - n_comparables
+
     log.info(
-        f"  Diferencia media           : {top1_precio['diferencia_precio'].mean():+.2f}€"
+        f"  Pares comparables (misma unidad): {n_comparables:,} "
+        f"({n_excluidos:,} excluidos por unidad distinta)"
     )
     log.info(
-        f"  Diferencia media (%)       : {top1_precio['diferencia_precio_pct'].mean():+.1f}%"
+        f"  Precio/medida medio MP     : {top1_medida['precio_medida_mp'].mean():.2f}€"
+    )
+    log.info(
+        f"  Precio/medida medio COM    : {top1_medida['precio_medida_com'].mean():.2f}€"
+    )
+    # Mediana como métrica principal — robusta frente a outliers
+    mediana_pct = top1_medida["diferencia_por_medida_pct"].median()
+    media_pct = top1_medida["diferencia_por_medida_pct"].mean()
+    log.info(
+        f"  Diferencia mediana (medida): {mediana_pct:+.1f}%"
+    )
+    log.info(
+        f"  Diferencia media (medida)  : {media_pct:+.1f}%"
     )
     log.info("")
 
-    # Top subcategorías con mayor brecha
-    log.info("  Top 5 subcategorías con mayor brecha de precio:")
+    # ── Métrica secundaria: precio absoluto (referencia) ──
+    top1_precio = top1.dropna(subset=["diferencia_precio"])
+    log.info(f"  Precio absoluto medio MP   : {top1_precio['precio_mp'].mean():.2f}€")
+    log.info(f"  Precio absoluto medio COM  : {top1_precio['precio_com'].mean():.2f}€")
+    log.info(
+        f"  Diferencia media (abs.)    : {top1_precio['diferencia_precio'].mean():+.2f}€"
+    )
+    log.info(
+        f"  Diferencia media (abs. %)  : {top1_precio['diferencia_precio_pct'].mean():+.1f}%"
+    )
+    log.info("")
+
+    # Top subcategorías con mayor brecha — por medida (mediana)
+    log.info("  Top 5 subcategorías con mayor brecha (mediana por medida):")
     top_brecha = (
-        top1_precio.groupby("subcategoria")["diferencia_precio_pct"]
-        .mean()
+        top1_medida.groupby("subcategoria")["diferencia_por_medida_pct"]
+        .median()
         .sort_values(ascending=False)
         .head(5)
     )
@@ -259,14 +307,104 @@ def resumir(equiv: pd.DataFrame) -> None:
     log.info("")
     log.info("  Ejemplos de equivalencias (similitud más alta):")
     muestra = top1.nlargest(5, "similitud")[
-        ["titulo_mp", "titulo_com", "similitud", "diferencia_precio_pct"]
+        ["titulo_mp", "titulo_com", "similitud", "diferencia_por_medida_pct"]
     ]
     for _, row in muestra.iterrows():
+        pct_str = (
+            f"{row['diferencia_por_medida_pct']:+.1f}%"
+            if pd.notna(row["diferencia_por_medida_pct"])
+            else "s/d"
+        )
         log.info(
             f"    [{row['similitud']:.3f}] {row['titulo_mp'][:35]:<35} ↔ "
-            f"{row['titulo_com'][:35]:<35} ({row['diferencia_precio_pct']:+.1f}%)"
+            f"{row['titulo_com'][:35]:<35} ({pct_str})"
         )
     log.info("─" * 60)
+
+
+def generar_visualizaciones(
+    equiv: pd.DataFrame, embeddings: np.ndarray, df: pd.DataFrame
+) -> None:
+    """Genera gráficas diagnósticas de NLP y equivalencias."""
+    # 1. Distribución de Similitud Coseno
+    plt.figure(figsize=(10, 5))
+    plt.hist(equiv["similitud"], bins=50, color="teal", alpha=0.7, edgecolor="white")
+    plt.axvline(
+        UMBRAL_SIMILITUD,
+        color="red",
+        linestyle="--",
+        label=f"Umbral ({UMBRAL_SIMILITUD})",
+    )
+    plt.title("Distribución de Similitud Coseno entre Productos")
+    plt.xlabel("Similitud")
+    plt.ylabel("Frecuencia")
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / "similitud_distribucion.png", dpi=150)
+    plt.close()
+
+    # 2. Brecha de precios por subcategoría — solo pares con misma unidad
+    top1 = equiv[equiv["rank"] == 1].copy()
+    top1_medida = top1[
+        top1["misma_unidad"] & top1["diferencia_por_medida_pct"].notna()
+    ]
+    counts = top1_medida["subcategoria"].value_counts()
+    top_subcats = counts.head(10).index
+
+    brecha = (
+        top1_medida[top1_medida["subcategoria"].isin(top_subcats)]
+        .groupby("subcategoria")["diferencia_por_medida_pct"]
+        .median()
+        .sort_values()
+    )
+
+    plt.figure(figsize=(12, 6))
+    colors = ["crimson" if x > 0 else "forestgreen" for x in brecha.values]
+    brecha.plot(kind="barh", color=colors, alpha=0.8)
+    plt.title("Brecha de Precio por Medida: Marca Comercial vs Marca Propia")
+    plt.xlabel("Diferencia de Precio por Medida (%)")
+    plt.ylabel("Subcategoría")
+    plt.grid(True, axis="x", alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / "brecha_precios.png", dpi=150)
+    plt.close()
+
+    # 3. Proyección de Embeddings (t-SNE) - Muestra de 1000 productos
+    log.info("Generando proyección t-SNE de embeddings (esto puede tardar un poco)...")
+    n_sample = min(1000, len(embeddings))
+    rng = np.random.RandomState(42)
+    indices = rng.choice(len(embeddings), n_sample, replace=False)
+    emb_sample = embeddings[indices]
+    subcats_sample = df.iloc[indices]["subcategoria"].values
+
+    tsne = TSNE(n_components=2, random_state=42, perplexity=30)
+    vis_dims = tsne.fit_transform(emb_sample)
+
+    plt.figure(figsize=(12, 10))
+    # Colorear por top 10 subcategorías, el resto en gris
+    top_10_global = df["subcategoria"].value_counts().head(10).index
+    for cat in top_10_global:
+        mask = subcats_sample == cat
+        plt.scatter(vis_dims[mask, 0], vis_dims[mask, 1], label=cat, alpha=0.6, s=50)
+
+    plt.scatter(
+        vis_dims[~np.isin(subcats_sample, top_10_global), 0],
+        vis_dims[~np.isin(subcats_sample, top_10_global), 1],
+        color="lightgrey",
+        alpha=0.2,
+        s=20,
+        label="Otras",
+    )
+
+    plt.title(f"Proyección Semántica de Productos (t-SNE sobre {n_sample} items)")
+    plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", title="Subcategorías")
+    plt.grid(True, alpha=0.2)
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / "nlp_proyeccion_embeddings.png", dpi=150)
+    plt.close()
+
+    log.info(f"Gráficas guardadas en {IMG_DIR}")
 
 
 # ── Guardar resultados ────────────────────────────────────────────────────────
@@ -295,6 +433,7 @@ def ejecutar():
     embeddings, _ = generar_embeddings(df)
     equiv = encontrar_equivalencias(df, embeddings)
     resumir(equiv)
+    generar_visualizaciones(equiv, embeddings, df)
     guardar(df, embeddings, equiv)
     return df, embeddings, equiv
 

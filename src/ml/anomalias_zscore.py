@@ -24,6 +24,7 @@ Por qué rolling y no global:
 import pandas as pd
 import numpy as np
 import logging
+import matplotlib.pyplot as plt
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s — %(message)s")
@@ -32,6 +33,9 @@ log = logging.getLogger(__name__)
 # ── Configuración ─────────────────────────────────────────────────────────────
 PARTITIONED_DIR = Path("data/processed")
 OUTPUT_PATH = Path("data/anomalias/zscore_resultados.parquet")
+IMG_DIR = Path("docs/img/zscore")
+
+IMG_DIR.mkdir(parents=True, exist_ok=True)
 
 VENTANA_DIAS = 14  # días de contexto para calcular media/std local
 UMBRAL_Z = 2.5  # número de desviaciones típicas para considerar anomalía
@@ -155,6 +159,44 @@ def resumir_anomalias(df: pd.DataFrame) -> None:
     log.info("─" * 60)
 
 
+def generar_visualizaciones(df: pd.DataFrame) -> None:
+    """Genera gráficas diagnósticas de los Z-Scores."""
+    # 1. Histograma de Z-Scores
+    plt.figure(figsize=(10, 5))
+    plt.hist(df["zscore"].dropna(), bins=100, color="steelblue", alpha=0.7, edgecolor="white")
+    plt.axvline(UMBRAL_Z, color="red", linestyle="--", label=f"Umbral +{UMBRAL_Z}σ")
+    plt.axvline(-UMBRAL_Z, color="red", linestyle="--", label=f"Umbral -{UMBRAL_Z}σ")
+    plt.title("Distribución de Z-Scores (Desviaciones Típicas)")
+    plt.xlabel("Z-Score")
+    plt.ylabel("Frecuencia")
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / "zscore_distribucion.png", dpi=150)
+    plt.close()
+
+    # 2. Ejemplo de serie temporal con anomalía (el producto con mayor desviación)
+    top_anom = df.loc[df["zscore"].abs().idxmax()]
+    ref_ejemplo = top_anom["referencia"]
+    df_ejemplo = df[df["referencia"] == ref_ejemplo].sort_values("fecha")
+
+    plt.figure(figsize=(12, 5))
+    plt.plot(df_ejemplo["fecha"], df_ejemplo["precio_actual"], marker="o", markers_with_fill=False, label="Precio Real")
+    anomalias_ej = df_ejemplo[df_ejemplo["anomalia_zscore"]]
+    plt.scatter(anomalias_ej["fecha"], anomalias_ej["precio_actual"], color="red", s=100, label="Anomalía Detectada", zorder=5)
+    
+    plt.title(f"Serie Temporal: {df_ejemplo['titulo'].iloc[0]} (Ref: {ref_ejemplo})")
+    plt.xlabel("Fecha")
+    plt.ylabel("Precio (€)")
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / "zscore_ejemplo_anomalia.png", dpi=150)
+    plt.close()
+    
+    log.info(f"Gráficas guardadas en {IMG_DIR}")
+
+
 # ── Guardar resultados ────────────────────────────────────────────────────────
 def guardar_resultados(df: pd.DataFrame) -> None:
     """
@@ -191,6 +233,7 @@ def ejecutar():
     df = cargar_series()
     df = calcular_zscore_rolling(df)
     resumir_anomalias(df)
+    generar_visualizaciones(df)
     guardar_resultados(df)
     return df  # lo devuelve para usarlo en el notebook de comparativa
 

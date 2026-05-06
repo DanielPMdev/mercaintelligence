@@ -30,6 +30,7 @@ import numpy as np
 import pandas as pd
 import logging
 import joblib
+import matplotlib.pyplot as plt
 from pathlib import Path
 
 from tensorflow.keras.models import Model, load_model
@@ -46,6 +47,9 @@ IF_PATH = Path("data/anomalias/if_resultados.parquet")
 OUTPUT_PATH = Path("data/anomalias/ae_resultados.parquet")
 MODEL_PATH = Path("models/autoencoder_lstm.keras")
 UMBRAL_PATH = Path("models/ae_umbral.pkl")
+IMG_DIR = Path("docs/img/autoencoder")
+
+IMG_DIR.mkdir(parents=True, exist_ok=True)
 
 VENTANA = 14  # días de secuencia temporal (igual que Z-Score para comparabilidad)
 N_FEATURES = 3  # precio_actual_norm, variacion_pct, dias_sin_cambio_norm
@@ -227,6 +231,37 @@ def entrenar(X_train: np.ndarray) -> tuple:
     return modelo, history
 
 
+def guardar_graficas_entrenamiento(history, X_train, modelo):
+    """Genera y guarda las gráficas de entrenamiento y distribución de error."""
+    # 1. Curvas de pérdida
+    plt.figure(figsize=(10, 4))
+    plt.plot(history.history["loss"], label="Train Loss")
+    plt.plot(history.history["val_loss"], label="Val Loss")
+    plt.title("Curvas de entrenamiento - Autoencoder LSTM")
+    plt.xlabel("Época")
+    plt.ylabel("MSE")
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / "ae_training_curves_local.png", dpi=150)
+    plt.close()
+
+    # 2. Distribución del error
+    X_pred_train = modelo.predict(X_train, verbose=0)
+    errores_train = np.mean(np.square(X_train - X_pred_train), axis=(1, 2))
+
+    plt.figure(figsize=(10, 4))
+    plt.hist(errores_train, bins=100, alpha=0.7, color="steelblue")
+    plt.title("Distribución del error de reconstrucción (Train)")
+    plt.xlabel("MSE")
+    plt.ylabel("Frecuencia")
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(IMG_DIR / "ae_error_distribution_local.png", dpi=150)
+    plt.close()
+    log.info(f"Gráficas de entrenamiento guardadas en {IMG_DIR}")
+
+
 
 
 # ── Detección en todo el histórico ───────────────────────────────────────────
@@ -399,7 +434,8 @@ def ejecutar():
         log.info("No se encontró modelo pre-entrenado → entrenamiento completo")
         log.info("Construyendo secuencias normales para entrenamiento...")
         X_train, _ = construir_secuencias(df, solo_normales=True)
-        modelo, _ = entrenar(X_train)
+        modelo, history = entrenar(X_train)
+        guardar_graficas_entrenamiento(history, X_train, modelo)
         umbral = None  # Se calculará dinámicamente durante la inferencia
 
     resultados = detectar_anomalias(df, modelo, umbral)

@@ -1,0 +1,25 @@
+[project]
+name = "mercaintelligence"
+version = "0.1.0"
+description = "MercaIntelligence: Sistema de Inteligencia de Mercado y Análisis de Precios"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+    {name = "Daniel Porras Morales"}
+]
+dependencies = [
+    "pandas",
+    "numpy",
+    "flask>=3.1.3",
+    "flask-cors>=6.0.2",
+    "pyarrow",
+]
+
+[tool.pyrefly]
+project_excludes = [
+    "**/_pyrefly_virtual_/**",
+    "**/*inmemory*"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}

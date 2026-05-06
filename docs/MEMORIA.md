@@ -519,3 +519,13 @@ Se comparó el modelo de Deep Learning (LSTM) con un *Baseline* lineal (Regresi�
 1. **Superioridad de la Arquitectura Recurrente**: El LSTM logra un AUC-ROC de **0.915** frente al 0.755 del modelo lineal, confirmando que la red es capaz de extraer patrones de las secuencias temporales que pasan desapercibidos al aplanar los datos.
 2. **Equilibrio Operativo (Precision-Recall)**: Gracias a la optimización del umbral, el LSTM alcanza una Precisión del **33.4%** (1 de cada 3 alertas es un cambio real) reteniendo un Recall del **66.0%** (detecta 2 de cada 3 cambios). El modelo Baseline, por el contrario, colapsa en su Recall (32.4%), ignorando la gran mayoría de los eventos.
 3. **Impacto de Negocio**: Se generaron y guardaron predicciones probabilísticas para más de 590,000 secuencias históricas. El modelo actual se erige como una herramienta equilibrada y accionable para inteligencia competitiva, permitiendo anticipar los movimientos de la competencia sin sobrecargar de "ruido" a los analistas.
+
+# Fecha Hoy --> 06/05/2026
+
+### nlp_embeddings.py
+
+Mirar el archivo 'nlp_equivalencias_analisis.md'
+
+### app.py
+
+Mirar los endpoints '/health' , '/api/categorias' , '/api/productos' , '/api/ipc' , '/api/equivalencias' , '/api/anomalias/hoy'
