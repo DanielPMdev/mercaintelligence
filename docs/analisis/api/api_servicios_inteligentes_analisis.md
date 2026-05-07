@@ -68,12 +68,16 @@ Transforma una salida probabilística binaria en una estimación financiera cont
 
 **Fórmula**: `precio_predicho = precio_actual × (1 + prob_cambio_lstm × mediana_cambio_historico%)`
 
+Esta fórmula representa una aproximación lineal honesta y bien justificada. Constituye un **ensemble híbrido supervisado-estadístico**: combina una señal probabilística compleja (LSTM) con una señal empírica de magnitud (histórico). 
+
 > [!IMPORTANT]
-> Se utiliza la **mediana** de los cambios históricos (no la media) para proteger la predicción de caídas extremas provocadas por ofertas puntuales de hipermercado.
+> El uso de la **mediana** en lugar de la media está correctamente motivado para proteger la predicción de caídas extremas (outliers) provocadas por ofertas puntuales de hipermercado, garantizando una estimación de tendencia más estable.
 
 ### 2.3 Motor de Recomendaciones Bidireccional
 
 Utiliza las equivalencias calculadas por `paraphrase-multilingual-MiniLM-L12-v2`. Se filtra por similitud `>0.80` y `misma_unidad_medida = True` para garantizar viabilidad económica.
+
+La lógica direccional MP→COM y COM→MP es **la decisión de diseño más original del proyecto**. El caso de uso "si ya compras marca propia, te confirmamos cuánto ahorras" invierte la dirección habitual de estos sistemas de recomendación. Es una mecánica simple de implementar en backend, pero conceptualmente diferenciadora y de alto valor percibido para el consumidor final.
 
 ---
 
@@ -97,8 +101,9 @@ El usuario enviaba el peso porcentual de cada producto.
 
 ### Iteración 3: Pesos implícitos (Versión final)
 
-El usuario solo provee `referencia` y `cantidad_mensual`. La API cruza la cantidad con el `precio_base` del catálogo, estima el presupuesto total y deduce matemáticamente el peso de cada item.
+El usuario solo provee `referencia` y `cantidad_mensual`. La API cruza la cantidad con el `precio_base` del catálogo, estima el presupuesto total y deduce matemáticamente el peso de cada item. Esta es la decisión metodológica correcta y más defensible frente a simplificaciones previas (como medias aritméticas). 
 
+De hecho, los pesos se derivan del gasto estimado mensual por producto, siguiendo estrictamente la **metodología de índices de Laspeyres** que emplea el INE, donde cada bien pondera según su participación en el gasto total.
 ---
 
 ## 4. Validación de Perfiles de Cesta
@@ -111,14 +116,18 @@ Se validó el sistema con cuatro arquetipos predefinidos, utilizando precios rea
 | **Cesta Vegana** | 11 | ~33 € | 98.34 (-1.7%) |
 | **Cesta Deportista** | 12 | ~55 € | 98.54 (-1.5%) |
 | **Cesta Familiar** | 18 | ~64 € | 98.40 (-1.6%) |
+| **Cesta Dani** | 49 | ~220 € | 99.26 (-0.7%) |
 
-> Todos los perfiles muestran deflación (-1.5% a -2.3%) desde noviembre de 2025, evidenciando una ligera corrección a la baja en precios de alimentación en los datos extraídos.
+> [!TIP]
+> **El caso de uso real:** La "Cesta Dani" está construida con cantidades reales basadas en tickets de compra de abril de 2026. A nivel de presentación e hito de TFE, esto es oro: permite mostrar un IPC personal propio evolucionando de forma hiper-realista desde noviembre de 2025.
 
+**El hallazgo de la deflación:**
+Los resultados unánimes de deflación (entre -0.7% y -2.3%) desde noviembre de 2025 constituyen un hallazgo analítico real. Significa que, dentro del alcance temporal de los datos, los precios de Mercadona han bajado ligeramente. Este dato contrasta fuertemente con la **narrativa de inflación generalizada** y es un resultado empírico que merece la pena defender. En su exposición, contrastar este descenso algorítmico con la evolución oficial del IPC del INE en el mismo periodo otorgará un gran contexto macroeconómico.
 ---
 
 ## 5. Limitaciones Conocidas
 
-1. **Predicción Lineal Heurística:** Asumir que la dirección futura del precio será idéntica a su mediana histórica es una simplificación matemática. Funciona para productos estables pero puede fallar ante shocks de oferta inéditos.
+1. **Predicción ante shocks inéditos:** Aunque la fórmula del *ensemble* estadístico es robusta, asumir que la dirección futura del precio será idéntica a su mediana histórica es una simplificación empírica. El sistema funcionará muy bien para productos con comportamiento recurrente, pero irremediablemente **fallará ante shocks de oferta inéditos** (factores macroeconómicos, climáticos o de cadena de suministro sin precedentes en el dataset).
 2. **Dependencia Temporal del Backend:** El cálculo exige que todos los productos de la cesta existan en todas las fechas históricas comparadas; de lo contrario, se purgan fechas completas con `dropna()`, reduciendo la resolución de la gráfica del IPC final.
 3. **Frecuencia de Compra Asumida Constante:** El cálculo proyecta el gasto mensual multiplicando por `cantidad_mensual` de manera estática, sin modelar variaciones estacionales de consumo (ej. comprar más helados en verano).
 

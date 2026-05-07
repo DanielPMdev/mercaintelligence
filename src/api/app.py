@@ -28,7 +28,6 @@ deportista) que cargan cestas con productos y cantidades típicas.
 """
 
 import pandas as pd
-import numpy as np
 import logging
 from pathlib import Path
 from flask import Flask, jsonify, request
@@ -105,7 +104,13 @@ if not df_historico.empty:
     df_tendencias = (
         _cambios.groupby("referencia")["cambio_pct"]
         .agg(["mean", "median", "count"])
-        .rename(columns={"mean": "media_cambio", "median": "mediana_cambio", "count": "n_cambios"})
+        .rename(
+            columns={
+                "mean": "media_cambio",
+                "median": "mediana_cambio",
+                "count": "n_cambios",
+            }
+        )
     )
     log.info(
         f"Tendencias calculadas: {len(df_tendencias):,} productos con al menos 1 cambio"
@@ -575,7 +580,9 @@ def calcular_prediccion_cesta(productos: list[dict], horizonte_dias: int = 30) -
 
         # Probabilidad de cambio (LSTM)
         lstm_row = lstm_ultima[lstm_ultima["referencia"] == ref]
-        prob_cambio = float(lstm_row["prob_cambio_lstm"].iloc[0]) if not lstm_row.empty else 0.0
+        prob_cambio = (
+            float(lstm_row["prob_cambio_lstm"].iloc[0]) if not lstm_row.empty else 0.0
+        )
 
         # Tendencia histórica (mediana de cambios pasados)
         if ref in df_tendencias.index:
@@ -619,7 +626,11 @@ def calcular_prediccion_cesta(productos: list[dict], horizonte_dias: int = 30) -
     if not desglose:
         return {"error": "Ningún producto válido en la cesta"}
 
-    variacion = ((coste_predicho - coste_actual) / coste_actual * 100) if coste_actual > 0 else 0.0
+    variacion = (
+        ((coste_predicho - coste_actual) / coste_actual * 100)
+        if coste_actual > 0
+        else 0.0
+    )
 
     return {
         "horizonte_dias": horizonte_dias,
@@ -700,31 +711,37 @@ def buscar_alternativas_cesta(productos: list[dict]) -> dict:
 
         ahorro_unitario = precio_usuario - precio_alt
         ahorro_mensual = ahorro_unitario * cantidad
-        ahorro_pct = (ahorro_unitario / precio_usuario * 100) if precio_usuario > 0 else 0
+        ahorro_pct = (
+            (ahorro_unitario / precio_usuario * 100) if precio_usuario > 0 else 0
+        )
 
         # Solo recomendar si la alternativa es realmente más barata
         es_mas_barata = ahorro_unitario > 0
         if es_mas_barata:
             ahorro_total += ahorro_mensual
 
-        recomendaciones.append({
-            "referencia_actual": int(ref),
-            "titulo_actual": str(titulo_usuario),
-            "tipo_actual": str(tipo_usuario),
-            "precio_actual": float(round(precio_usuario, 2)),
-            "referencia_alternativa": int(ref_alt),
-            "titulo_alternativa": str(titulo_alt),
-            "tipo_alternativa": str(tipo_alt),
-            "precio_alternativa": float(round(precio_alt, 2)),
-            "similitud_nlp": float(round(similitud, 4)),
-            "misma_unidad_medida": bool(misma_unidad),
-            "diferencia_por_medida_pct": float(round(dif_por_medida_pct, 2)) if pd.notna(dif_por_medida_pct) else None,
-            "cantidad_mensual": int(cantidad),
-            "ahorro_unitario": float(round(ahorro_unitario, 2)),
-            "ahorro_mensual": float(round(ahorro_mensual, 2)),
-            "ahorro_pct": float(round(ahorro_pct, 1)),
-            "es_mas_barata": bool(es_mas_barata),
-        })
+        recomendaciones.append(
+            {
+                "referencia_actual": int(ref),
+                "titulo_actual": str(titulo_usuario),
+                "tipo_actual": str(tipo_usuario),
+                "precio_actual": float(round(precio_usuario, 2)),
+                "referencia_alternativa": int(ref_alt),
+                "titulo_alternativa": str(titulo_alt),
+                "tipo_alternativa": str(tipo_alt),
+                "precio_alternativa": float(round(precio_alt, 2)),
+                "similitud_nlp": float(round(similitud, 4)),
+                "misma_unidad_medida": bool(misma_unidad),
+                "diferencia_por_medida_pct": float(round(dif_por_medida_pct, 2))
+                if pd.notna(dif_por_medida_pct)
+                else None,
+                "cantidad_mensual": int(cantidad),
+                "ahorro_unitario": float(round(ahorro_unitario, 2)),
+                "ahorro_mensual": float(round(ahorro_mensual, 2)),
+                "ahorro_pct": float(round(ahorro_pct, 1)),
+                "es_mas_barata": bool(es_mas_barata),
+            }
+        )
 
     # Ordenar: primero las que ahorran más
     recomendaciones.sort(key=lambda x: x["ahorro_mensual"], reverse=True)
