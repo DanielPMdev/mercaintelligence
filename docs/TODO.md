@@ -12,4 +12,6 @@
 
 - [ ] Crear el README.md del proyecto con explicación de cada parte, cómo ejecutarlo y cualquier información relevante.
 
+- [ ] Crear la memoria para el TFE. 
+
 - [ ] Crear el video-demo del proyecto para youtube
