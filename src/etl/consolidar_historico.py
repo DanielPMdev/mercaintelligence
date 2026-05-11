@@ -6,17 +6,16 @@ A partir de aquí, usar ingesta_incremental.py para cada CSV nuevo.
 
 import pandas as pd
 import glob
-import os
 import logging
 from pathlib import Path
 
 # Opt-in to pandas future behavior to silence downcasting warnings in ffill/bfill
-pd.set_option('future.no_silent_downcasting', True)
+pd.set_option("future.no_silent_downcasting", True)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s — %(message)s")
 log = logging.getLogger(__name__)
 
-RAW_DIR      = Path("data/raw")
+RAW_DIR = Path("data/raw")
 PARQUET_PATH = Path("data/processed/maestro.parquet")
 
 
@@ -63,7 +62,9 @@ def limpiar(df: pd.DataFrame) -> pd.DataFrame:
     df["marca_propia"] = df["titulo"].apply(detectar_marca)
 
     # 5. Variación de precio (calculada dentro del mismo CSV — útil como feature base)
-    df["tiene_precio_anterior"] = df["precio_anterior"].notna() & (df["precio_anterior"] > 0)
+    df["tiene_precio_anterior"] = df["precio_anterior"].notna() & (
+        df["precio_anterior"] > 0
+    )
 
     # 6. Eliminar duplicados exactos por si el scraper corrió dos veces el mismo día
     df = df.drop_duplicates(subset=["referencia", "fecha"])
@@ -106,21 +107,27 @@ def consolidar():
             df = limpiar(df)
             fragmentos.append(df)
             if (i + 1) % 20 == 0:
-                log.info(f"  Procesados {i+1}/{len(csvs)} ficheros...")
+                log.info(f"  Procesados {i + 1}/{len(csvs)} ficheros...")
 
     maestro = pd.concat(fragmentos, ignore_index=True)
     maestro = maestro.sort_values(["referencia", "fecha"]).reset_index(drop=True)
 
     # Imputar unidad de medida para rellenar los nulos de las primeras extracciones
-    maestro["unidad_medida"] = maestro.groupby("referencia")["unidad_medida"].transform(lambda x: x.ffill().bfill())
+    maestro["unidad_medida"] = maestro.groupby("referencia")["unidad_medida"].transform(
+        lambda x: x.ffill().bfill()
+    )
 
     # Para los pocos que queden sin unidad (productos que nunca tuvieron unidad_medida),
     # inferimos basándonos en el formato o asignamos 'ud' por defecto.
     nulos = maestro["unidad_medida"].isna()
     if nulos.any():
         formato = maestro.loc[nulos, "formato"].astype(str).str.lower()
-        maestro.loc[nulos & formato.str.contains(r"\b(?:ml|l)\b", regex=True), "unidad_medida"] = "100 ml"
-        maestro.loc[nulos & formato.str.contains(r"\b(?:g|kg)\b", regex=True), "unidad_medida"] = "kg"
+        maestro.loc[
+            nulos & formato.str.contains(r"\b(?:ml|l)\b", regex=True), "unidad_medida"
+        ] = "100 ml"
+        maestro.loc[
+            nulos & formato.str.contains(r"\b(?:g|kg)\b", regex=True), "unidad_medida"
+        ] = "kg"
         maestro.loc[maestro["unidad_medida"].isna(), "unidad_medida"] = "ud"
 
     PARQUET_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -129,7 +136,9 @@ def consolidar():
     log.info(f"✅ Parquet maestro guardado en {PARQUET_PATH}")
     log.info(f"   Filas totales : {len(maestro):,}")
     log.info(f"   Productos únicos: {maestro['referencia'].nunique():,}")
-    log.info(f"   Rango fechas: {maestro['fecha'].min().date()} → {maestro['fecha'].max().date()}")
+    log.info(
+        f"   Rango fechas: {maestro['fecha'].min().date()} → {maestro['fecha'].max().date()}"
+    )
     log.info(f"   Columnas: {list(maestro.columns)}")
 
 
