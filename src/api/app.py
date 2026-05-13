@@ -1231,6 +1231,68 @@ def anomalias_hoy():
     )
 
 
+@app.route("/api/catalogo/eventos")
+def catalogo_eventos():
+    """
+    Productos nuevos y descatalogados detectados.
+    Query params:
+      tipo  : 'nuevo' | 'descatalogado' | 'todos' (default)
+      limit : máximo resultados (default 50)
+    """
+    nuevos_path = Path("data/catalogo/nuevos.parquet")
+    desc_path = Path("data/catalogo/descatalogados.parquet")
+
+    tipo = request.args.get("tipo", "todos")
+    limit = int(request.args.get("limit", 50))
+
+    resultados = {}
+
+    if tipo in ("nuevo", "todos") and nuevos_path.exists():
+        df_n = pd.read_parquet(nuevos_path)
+        df_n["primera_fecha"] = df_n["primera_fecha"].astype(str)
+        resultados["nuevos"] = df_n.head(limit).to_dict(orient="records")
+
+    if tipo in ("descatalogado", "todos") and desc_path.exists():
+        df_d = pd.read_parquet(desc_path)
+        df_d["ultima_fecha"] = df_d["ultima_fecha"].astype(str)
+        resultados["descatalogados"] = (
+            df_d.sort_values("dias_desde_ultima").head(limit).to_dict(orient="records")
+        )
+
+    return jsonify(resultados)
+
+
+@app.route("/api/shrinkflation")
+def shrinkflation():
+    """
+    Alertas de shrinkflation detectadas.
+    Query params:
+      categoria    : filtrar por categoría
+      min_severidad: severidad mínima (default 0)
+      limit        : máximo resultados (default 50)
+    """
+    path = Path("data/shrinkflation/alertas.parquet")
+    if not path.exists():
+        return jsonify({"error": "Datos de shrinkflation no disponibles"}), 503
+
+    df = pd.read_parquet(path)
+
+    if cat := request.args.get("categoria"):
+        df = df[df["categoria"] == cat.lower()]
+
+    min_sev = float(request.args.get("min_severidad", 0))
+    df = df[df["severidad"] >= min_sev]
+
+    limit = int(request.args.get("limit", 50))
+    df = df.nlargest(limit, "severidad")
+
+    for col in ["fecha_anterior", "fecha_actual"]:
+        if col in df.columns:
+            df[col] = df[col].astype(str)
+
+    return jsonify({"total": len(df), "alertas": df.to_dict(orient="records")})
+
+
 # ── Arranque ──────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     log.info("Arrancando MercaIntelligence API...")

@@ -529,3 +529,100 @@ Mirar el archivo 'nlp_equivalencias_analisis.md'
 ### app.py
 
 Mirar los endpoints '/health' , '/api/categorias' , '/api/productos' , '/api/ipc' , '/api/equivalencias' , '/api/anomalias/hoy'
+
+
+# Fecha Hoy --> 07/05/2026
+
+### detector_catalogo.py
+
+PS E:\Estudios\CE_IAyBD\TFE\mercaintelligence> & "C:/Users/Daniel PC/AppData/Local/Programs/Python/Python313/python.exe" e:/Estudios/CE_IAyBD/TFE/mercaintelligence/src/etl/detector_catalogo.py    
+2026-05-12 10:09:45,970 — Presencias cargadas: 694,446 | Fechas: 160 | Referencias únicas: 5,042
+2026-05-12 10:09:46,174 — Tamaño medio del catálogo: 4340 productos/día
+2026-05-12 10:09:46,184 — Máximo: 4498 | Mínimo: 2507
+2026-05-12 10:09:47,302 — Productos nuevos detectados: 629
+2026-05-12 10:09:47,302 —   Primera semana (días 1-7)  : 50 
+2026-05-12 10:09:47,303 —   Primer mes (días 1-30)     : 196
+2026-05-12 10:09:47,304 —   Resto del período          : 433
+2026-05-12 10:09:47,819 — Productos descatalogados confirmados: 657
+2026-05-12 10:09:47,819 —   Desaparecidos hace 30-60 días  : 106
+2026-05-12 10:09:47,819 —   Desaparecidos hace >60 días    : 511
+2026-05-12 10:09:47,825 — Productos nuevos por mes:
+2026-05-12 10:09:47,826 —   2025-11:  177 productos nuevos      
+2026-05-12 10:09:47,826 —   2025-12:   76 productos nuevos      
+2026-05-12 10:09:47,826 —   2026-01:   45 productos nuevos      
+2026-05-12 10:09:47,827 —   2026-02:   63 productos nuevos      
+2026-05-12 10:09:47,827 —   2026-03:  157 productos nuevos      
+2026-05-12 10:09:47,827 —   2026-04:   90 productos nuevos      
+Top 5 categorías con más productos nuevos:
+2026-05-12 10:09:47,828 —   cuidado facial y corporal            125
+2026-05-12 10:09:47,828 —   charcutería y quesos                  54
+2026-05-12 10:09:47,829 —   congelados                            53
+2026-05-12 10:09:47,829 —   maquillaje                            49
+2026-05-12 10:09:47,829 —   limpieza y hogar                      43
+2026-05-12 10:09:47,829 —
+Nuevos de marca propia vs comercial:
+2026-05-12 10:09:47,830 —   comercial             244
+2026-05-12 10:09:47,830 —   hacendado             207
+2026-05-12 10:09:47,830 —   deliplus              135
+2026-05-12 10:09:47,830 —   bosque verde           36
+2026-05-12 10:09:47,830 —   compy                   7
+2026-05-12 10:09:47,858 — Resultados guardados en data\catalogo
+2026-05-12 10:09:49,916 — HEAD http://localhost:9200/ [status:200 duration:2.056s]
+2026-05-12 10:09:49,921 — HEAD http://localhost:9200/mercadona-catalogo [status:404 duration:0.004s]
+2026-05-12 10:09:51,709 — PUT http://localhost:9200/mercadona-catalogo [status:200 duration:1.787s]
+2026-05-12 10:09:51,710 — Índice 'mercadona-catalogo' creado
+2026-05-12 10:09:52,396 — PUT http://localhost:9200/_bulk [status:200 duration:0.562s]
+2026-05-12 10:09:52,812 — PUT http://localhost:9200/_bulk [status:200 duration:0.185s]
+2026-05-12 10:09:52,967 — PUT http://localhost:9200/_bulk [status:200 duration:0.092s]
+2026-05-12 10:09:52,970 — ES: 1286 eventos indexados | 0 errores
+ 
+
+### detector_shrinkflation.py
+
+PS E:\Estudios\CE_IAyBD\TFE\mercaintelligence> & "C:/Users/Daniel PC/AppData/Local/Programs/Python/Python313/python.exe" e:/Estudios/CE_IAyBD/TFE/mercaintelligence/src/etl/detector_shrinkflation.py
+2026-05-12 10:38:22,392 — Series cargadas: 694,446 filas | 5,042 productos con precio/medida
+2026-05-12 10:38:22,392 — Detectando shrinkflation (ventana=15d, precio<5.0%, medida>8.0%)...
+2026-05-12 10:40:20,311 — ────────────────────────────────────────────────────────────
+2026-05-12 10:40:20,312 — RESUMEN SHRINKFLATION
+2026-05-12 10:40:20,312 —   Alertas únicas (1 por producto) : 20
+2026-05-12 10:40:20,312 —   Variación media precio (%)      : -0.10%
+2026-05-12 10:40:20,313 —   Variación media medida (%)      : +12.39%
+2026-05-12 10:40:20,313 —   Severidad media                 : 12.49
+2026-05-12 10:40:20,313 —
+2026-05-12 10:40:20,314 —   Top 5 categorías afectadas:
+2026-05-12 10:40:20,314 —     fruta y verdura                       17
+2026-05-12 10:40:20,314 —     marisco y pescado                      3
+2026-05-12 10:40:20,315 —
+2026-05-12 10:40:20,315 —   Por marca:
+2026-05-12 10:40:20,315 —     comercial              20
+2026-05-12 10:40:20,315 —
+2026-05-12 10:40:20,316 —   Top 10 casos más severos:
+2026-05-12 10:40:20,320 —     [+31.6] alcachofa                                precio:+0.0% medida:+31.6%
+2026-05-12 10:40:20,320 —            Formato: 'Pieza 200 g aprox.' → 'Pieza 150 g aprox.'
+2026-05-12 10:40:20,320 —     [+20.1] rama de tomates                          precio:+2.1% medida:+22.2%
+2026-05-12 10:40:20,320 —            Formato: '800 g aprox.' → '670 g aprox.'
+2026-05-12 10:40:20,321 —     [+18.6] bacalao a rodajas                        precio:-3.8% medida:+14.8%
+2026-05-12 10:40:20,321 —            Formato: 'Pieza 3,08 kg aprox.' → 'Pieza 2,58 kg aprox.'     
+2026-05-12 10:40:20,322 —     [+16.9] kaki                                     precio:-1.9% medida:+15.0%
+2026-05-12 10:40:20,322 —            Formato: 'Pieza 260 g aprox.' → 'Pieza 220 g aprox.'
+2026-05-12 10:40:20,322 —     [+15.1] lubina limpia con cabeza                 precio:-2.8% medida:+12.3%
+2026-05-12 10:40:20,323 —            Formato: 'Pieza 520 g aprox.' → 'Pieza 450 g aprox.'
+2026-05-12 10:40:20,323 —     [+14.2] manzana roja acidulce                    precio:-1.7% medida:+12.5%
+2026-05-12 10:40:20,324 —            Formato: 'Pieza 250 g aprox.' → 'Pieza 220 g aprox.'
+2026-05-12 10:40:20,324 —     [+12.9] tomate canario                           precio:-2.9% medida:+10.0%
+2026-05-12 10:40:20,324 —            Formato: 'Pieza 170 g aprox.' → 'Pieza 150 g aprox.'
+2026-05-12 10:40:20,324 —     [+12.7] lima                                     precio:-3.0% medida:+9.6%
+2026-05-12 10:40:20,325 —            Formato: 'Pieza 80 g aprox.' → 'Pieza 70 g aprox.'
+2026-05-12 10:40:20,325 —     [+12.3] plátano de canarias igp                  precio:-2.8% medida:+9.5%
+2026-05-12 10:40:20,325 —            Formato: 'Pieza 170 g aprox.' → 'Pieza 150 g aprox.'
+2026-05-12 10:40:20,326 —     [+11.5] manzana granny smith                     precio:-2.4% medida:+9.1%
+2026-05-12 10:40:20,326 —            Formato: 'Pieza 190 g aprox.' → 'Pieza 170 g aprox.'
+2026-05-12 10:40:20,326 — ────────────────────────────────────────────────────────────
+2026-05-12 10:40:20,339 — Alertas guardadas: data\shrinkflation\alertas.parquet
+2026-05-12 10:40:22,407 — HEAD http://localhost:9200/ [status:200 duration:2.066s]
+2026-05-12 10:40:22,411 — HEAD http://localhost:9200/mercadona-shrinkflation [status:404 duration:0.004s]
+2026-05-12 10:40:24,198 — PUT http://localhost:9200/mercadona-shrinkflation [status:200 duration:1.786s]
+2026-05-12 10:40:24,198 — Índice 'mercadona-shrinkflation' creado con mapping explícito
+2026-05-12 10:40:24,693 — PUT http://localhost:9200/_bulk [status:200 duration:0.483s]
+2026-05-12 10:40:24,694 — ES: 20 alertas indexadas | 0 errores
+PS E:\Estudios\CE_IAyBD\TFE\mercaintelligence>
