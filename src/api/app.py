@@ -762,7 +762,7 @@ def buscar_alternativas_cesta(productos: list[dict]) -> dict:
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 
-@app.route("/health")
+@app.route("/api/health")
 def health():
     return jsonify(
         {
@@ -1157,8 +1157,11 @@ def equivalencias():
         "titulo_mp",
         "marca_mp",
         "precio_mp",
+        "precio_medida_mp",
+        "unidad_medida_mp",
         "titulo_com",
         "precio_com",
+        "precio_medida_com",
         "subcategoria",
         "similitud",
         "diferencia_precio_pct",
@@ -1166,11 +1169,12 @@ def equivalencias():
         "misma_unidad",
     ]
     cols_disponibles = [c for c in cols if c in df.columns]
+    df_out = df[cols_disponibles]
 
     return jsonify(
         {
-            "total": len(df),
-            "equivalencias": df[cols_disponibles].to_dict(orient="records"),
+            "total": len(df_out),
+            "equivalencias": df_out.astype(object).where(pd.notnull(df_out), None).to_dict(orient="records"),
         }
     )
 
@@ -1193,6 +1197,16 @@ def anomalias_hoy():
         df["fecha"] = pd.to_datetime(df["fecha"])
         ultima = df["fecha"].max()
         df = df[(df["fecha"] == ultima) & df[col_flag]]
+        # Enriquecer con precio_por_medida y unidad_medida del catálogo
+        if not df.empty and not df_catalogo.empty:
+            enrich_cols = ["referencia", "precio_por_medida", "unidad_medida"]
+            enrich = df_catalogo[
+                [c for c in enrich_cols if c in df_catalogo.columns]
+            ].drop_duplicates("referencia")
+            for c in ["precio_por_medida", "unidad_medida"]:
+                if c in df.columns:
+                    df = df.drop(columns=[c])
+            df = df.merge(enrich, on="referencia", how="left")
         base_cols = [
             "referencia",
             "titulo",
@@ -1200,9 +1214,12 @@ def anomalias_hoy():
             "subcategoria",
             "marca_propia",
             "precio_actual",
+            "precio_por_medida",
+            "unidad_medida",
         ]
         cols_disponibles = [c for c in base_cols + cols_extra if c in df.columns]
-        return df[cols_disponibles].to_dict(orient="records")
+        df_out = df[cols_disponibles]
+        return df_out.astype(object).where(pd.notnull(df_out), None).to_dict(orient="records")
 
     if metodo in ("zscore", "todos"):
         resultados["zscore"] = cargar_anomalias(
@@ -1243,21 +1260,21 @@ def catalogo_eventos():
     desc_path = Path("data/catalogo/descatalogados.parquet")
 
     tipo = request.args.get("tipo", "todos")
-    limit = int(request.args.get("limit", 50))
+    limit = int(request.args.get("limit", 500))
 
     resultados = {}
 
     if tipo in ("nuevo", "todos") and nuevos_path.exists():
         df_n = pd.read_parquet(nuevos_path)
         df_n["primera_fecha"] = df_n["primera_fecha"].astype(str)
-        resultados["nuevos"] = df_n.head(limit).to_dict(orient="records")
+        df_n = df_n.sort_values("primera_fecha", ascending=False).head(limit)
+        resultados["nuevos"] = df_n.astype(object).where(pd.notnull(df_n), None).to_dict(orient="records")
 
     if tipo in ("descatalogado", "todos") and desc_path.exists():
         df_d = pd.read_parquet(desc_path)
         df_d["ultima_fecha"] = df_d["ultima_fecha"].astype(str)
-        resultados["descatalogados"] = (
-            df_d.sort_values("dias_desde_ultima").head(limit).to_dict(orient="records")
-        )
+        df_d = df_d.sort_values("dias_desde_ultima").head(limit)
+        resultados["descatalogados"] = df_d.astype(object).where(pd.notnull(df_d), None).to_dict(orient="records")
 
     return jsonify(resultados)
 
@@ -1290,7 +1307,7 @@ def shrinkflation():
         if col in df.columns:
             df[col] = df[col].astype(str)
 
-    return jsonify({"total": len(df), "alertas": df.to_dict(orient="records")})
+    return jsonify({"total": len(df), "alertas": df.astype(object).where(pd.notnull(df), None).to_dict(orient="records")})
 
 
 # ── Arranque ──────────────────────────────────────────────────────────────────
