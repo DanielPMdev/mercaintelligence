@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
+  <defs>
+    <linearGradient id="navGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#22c55e" />
+      <stop offset="100%" stop-color="#34d399" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- M Base -->
+  <path d="M 25 90 L 45 35 L 60 75 L 75 35 L 95 90" 
+        fill="none" stroke="url(#navGrad)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Línea de tendencia entrelazada -->
+  <path d="M 20 80 C 5 85, 5 105, 25 100 C 50 95, 60 60, 75 30 L 85 45 L 105 15" 
+        fill="none" stroke="url(#navGrad)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)" />
+
+  <!-- Puntos del gráfico -->
+  <circle cx="75" cy="30" r="6" fill="#34d399" filter="url(#glow)" />
+  <circle cx="85" cy="45" r="6" fill="#34d399" filter="url(#glow)" />
+  <circle cx="105" cy="15" r="6" fill="#34d399" filter="url(#glow)" />
+</svg>

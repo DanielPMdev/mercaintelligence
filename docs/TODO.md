@@ -1,10 +1,25 @@
 # Pendientes (TODO)
 
 ## 1. Desarrollo y Nuevas Funcionalidades
-- [ ] **Predicción de Precios**: Añadir modelo Prophet o XGBoost para predicción de precios.
-- [ ] **Motor de Shrinkflation**: Implementar detección por variación de `precio_por_medida` vs `precio_actual`. Indexar alertas en Elasticsearch y crear endpoint de consulta.
-- [ ] **Análisis de Catálogo**: Implementar detector de productos nuevos y descatalaogados mediante comparativa de snapshots diarios (joins) (Por ejemplo, una ventana de tiempo de 30 días). Consulta disponible vía API.
-- [ ] **Frontend**: Realizar la interfaz web que consuma los datos de predicción, anomalías, shrinkflation, etc mediante la API.
+
+### 1.1 Mantenimiento y Limpieza
+- [x] Eliminar o refactorizar archivos boilerplate del frontend no utilizados:
+  - [x] `src/views/AboutView.vue` — Reemplazado por página "Acerca del Proyecto"
+  - [x] `src/components/HelloWorld.vue`
+  - [x] `src/components/TheWelcome.vue`
+  - [x] `src/components/WelcomeItem.vue`
+  - [x] `src/components/icons/` (Contenido de la carpeta)
+  - [x] `src/assets/logo.svg`
+  - [x] `src/assets/base.css`
+  - [x] `src/stores/counter.js`
+
+### 1.2 Pulido y Branding (Frontend)
+- [x] Reemplazar Favicon por defecto por el logo de MercaIntelligence.
+- [x] Configurar `manifest.json` y metadatos de Web App (PWA básica).
+- [x] Implementar página 404 personalizada en el router.
+- [x] Añadir etiquetas Meta SEO (Open Graph) en `index.html`.
+- [x] Actualizar metadatos en `package.json` (nombre y versión).
+- [x] Personalizar el `README.md` de la carpeta frontend.
 
 ## 2. Infraestructura y Despliegue
 - [ ] Dockerizar la aplicación (crear Dockerfile y docker-compose.yml con la API, Elasticsearch y Kibana).

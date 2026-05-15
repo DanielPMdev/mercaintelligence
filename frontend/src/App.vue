@@ -4,9 +4,7 @@
     <nav class="sidebar" :class="{ collapsed: sidebarCollapsed, 'mobile-open': mobileOpen }">
       <div class="sidebar-header">
         <div class="logo-wrap" @click="sidebarCollapsed && (sidebarCollapsed = false)">
-          <div class="logo-icon">
-            <span class="logo-letter">M</span>
-          </div>
+          <img src="@/assets/logo-nav.svg" alt="Logo" class="logo-img" />
           <transition name="fade-text">
             <div v-if="!sidebarCollapsed" class="logo-text">
               <h1>MercaIntelligence</h1>
@@ -29,20 +27,23 @@
       </div>
 
       <ul class="nav-menu">
-        <li v-for="item in navItems" :key="item.path">
-          <RouterLink
-            :to="item.path"
-            class="nav-item"
-            :class="{ active: $route.path === item.path }"
-            :title="sidebarCollapsed ? item.label : ''"
-            @click="mobileOpen = false"
-          >
-            <span class="nav-icon" v-html="item.icon"></span>
-            <transition name="fade-text">
-              <span v-if="!sidebarCollapsed" class="nav-label">{{ item.label }}</span>
-            </transition>
-          </RouterLink>
-        </li>
+        <template v-for="item in navItems" :key="item.path">
+          <li v-if="item.divider" class="nav-divider"></li>
+          <li>
+            <RouterLink
+              :to="item.path"
+              class="nav-item"
+              :class="{ active: $route.path === item.path }"
+              :title="sidebarCollapsed ? item.label : ''"
+              @click="mobileOpen = false"
+            >
+              <span class="nav-icon" v-html="item.icon"></span>
+              <transition name="fade-text">
+                <span v-if="!sidebarCollapsed" class="nav-label">{{ item.label }}</span>
+              </transition>
+            </RouterLink>
+          </li>
+        </template>
       </ul>
 
       <!-- Status de la API -->
@@ -90,6 +91,7 @@ const navItems = [
   { path: '/marcas',       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>', label: 'Equivalencias NLP' },
   { path: '/catalogo',     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>', label: 'Catálogo' },
   { path: '/shrinkflation', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="9" y1="10" x2="15" y2="10"/></svg>', label: 'Shrinkflation' },
+  { path: '/about',        icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>', label: 'Acerca de', divider: true },
 ]
 
 const apiStatus = ref({ ok: false })
@@ -184,25 +186,14 @@ body {
   overflow: hidden;
 }
 
-.logo-icon {
+.logo-img {
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  background: linear-gradient(135deg, var(--color-primary), #10b981);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.logo-letter {
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: #0b0e14;
-  line-height: 1;
-  letter-spacing: -0.03em;
+  width: 38px;
+  height: 38px;
+  display: block;
 }
 
-.sidebar.collapsed .logo-icon {
+.sidebar.collapsed .logo-img {
   cursor: pointer;
 }
 .sidebar.collapsed .sidebar-header {
@@ -296,6 +287,12 @@ body {
 }
 .nav-item.active .nav-icon {
   color: var(--color-primary);
+}
+
+.nav-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 0.5rem 0.75rem;
 }
 
 .sidebar.collapsed .nav-item {

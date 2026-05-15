@@ -38,6 +38,18 @@ const router = createRouter({
       name: 'shrinkflation',
       component: () => import('@/views/ShrinkflationView.vue'),
       meta: { title: 'Shrinkflation' }
+    },
+    {
+      path: '/about',
+      name: 'about',
+      component: () => import('@/views/AboutView.vue'),
+      meta: { title: 'Acerca del Proyecto' }
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: () => import('@/views/NotFoundView.vue'),
+      meta: { title: 'Página no encontrada' }
     }
   ]
 })
