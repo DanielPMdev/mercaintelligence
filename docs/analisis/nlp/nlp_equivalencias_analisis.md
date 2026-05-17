@@ -24,6 +24,7 @@ flowchart LR
 | Decisión | Justificación |
 |----------|---------------|
 | **Eliminar marca del título** antes de generar embeddings | Evita que el coseno mida afinidad de marca en vez de similitud de producto. Sin esto, "leche hacendado" tendría mayor similitud con "yogur hacendado" que con "leche puleva" |
+| **Concatenar el formato al título** para generar embeddings | Evita la colisión de representaciones semánticas idénticas en productos con el mismo nombre pero diferente tamaño/envase (ej: Leche 1L vs Leche Pack 6x1L), permitiendo un emparejamiento mucho más preciso a nivel de SKU. |
 | **Restricción por subcategoría** | Evita falsos matches inter-categoría (ej: "leche" ↔ "yogur" por compartir vocabulario lácteo) |
 | **`normalize_embeddings=True`** | Permite calcular similitud coseno como producto escalar, mejorando rendimiento sin perder precisión |
 | **TOP_K=3 + umbral 0.75** | Doble filtro: ranking + mínimo de calidad semántica. Garantiza que solo se conserven matches con alta similitud |
@@ -38,30 +39,30 @@ flowchart LR
 
 | Métrica | Valor |
 |---------|:-----:|
-| Productos en catálogo | 4,306 |
+| Productos en catálogo | 4,310 |
 | Marca propia | 2,857 |
-| Marca comercial | 1,449 |
-| Equivalencias top-1 | **792** |
-| Cobertura (top-1 / MP) | 27.7% |
-| Similitud media | **0.847** |
-| Similitud mínima | 0.751 |
+| Marca comercial | 1,453 |
+| Equivalencias top-1 | **929** |
+| Cobertura (top-1 / MP) | 32.5% |
+| Similitud media | **0.844** |
+| Similitud mínima | 0.750 |
 
 > [!TIP]
-> Una similitud media de **0.847** con `paraphrase-multilingual-MiniLM-L12-v2` sobre textos cortos en español es un resultado muy sólido. Confirma que el modelo captura adecuadamente la semántica del dominio de supermercado.
+> Una similitud media de **0.844** con `paraphrase-multilingual-MiniLM-L12-v2` sobre textos cortos en español es un resultado muy sólido. Confirma que el modelo captura adecuadamente la semántica del dominio de supermercado.
 
 ### 2.2 Métricas económicas
 
 | Métrica | Valor |
 |---------|:-----:|
-| Pares comparables (misma unidad) | 746 de 792 |
-| Precio/medida medio marca propia | 5.47€ |
-| Precio/medida medio marca comercial | 7.65€ |
-| **Diferencia mediana (por medida)** | **+51.5%** |
-| Diferencia media (por medida) | +80.6% |
-| Diferencia media (precio absoluto) | +79.3% |
+| Pares comparables (misma unidad) | 897 de 929 |
+| Precio/medida medio marca propia | 5.22€ |
+| Precio/medida medio marca comercial | 7.07€ |
+| **Diferencia mediana (por medida)** | **+48.4%** |
+| Diferencia media (por medida) | +80.8% |
+| Diferencia media (precio absoluto) | +69.2% |
 
 > [!IMPORTANT]
-> Se utiliza la **mediana** (+51.5%) como estadístico principal por ser robusta frente a outliers. La media (+80.6%) es más alta por la influencia de subcategorías con grandes primas de marca legítimas (cosmética, limpieza).
+> Se utiliza la **mediana** (+48.4%) como estadístico principal por ser robusta frente a outliers. La media (+80.8%) es más alta por la influencia de subcategorías con grandes primas de marca legítimas (cosmética, limpieza).
 
 ---
 
@@ -222,7 +223,7 @@ Un filtro ciego sacrifica insights reales por eliminar errores que la mediana ya
 ```
 Cuartiles de diferencia por medida (%):
   25%     +1.5%
-  50%    +51.5%    ← mediana (métrica principal)
+  50%    +48.4%    ← mediana (métrica principal)
   75%   +115.2%
   
 Pares en rango razonable (-50% a +200%):  ~86%
@@ -248,11 +249,11 @@ El 86% de los pares producen brechas en un rango razonable. Los outliers restant
 
 ## 9. Conclusión
 
-El pipeline produce **792 equivalencias semánticas** con una similitud media de **0.847**, de las cuales **746 son directamente comparables** por precio/medida.
+El pipeline produce **929 equivalencias semánticas** con una similitud media de **0.844**, de las cuales **897 son directamente comparables** por precio/medida.
 
 La conclusión económica principal:
 
-> **La marca comercial es, en mediana, un 51.5% más cara por unidad de medida que su equivalente de marca propia**, validado mediante similitud semántica ≥ 0.75 entre productos de la misma subcategoría.
+> **La marca comercial es, en mediana, un 48.4% más cara por unidad de medida que su equivalente de marca propia**, validado mediante similitud semántica ≥ 0.75 entre productos de la misma subcategoría.
 
 Los filtros implementados — misma unidad de medida, mínimo de 3 productos comerciales por subcategoría, y mediana como estadístico principal — garantizan que esta cifra sea robusta y defensible.
 
