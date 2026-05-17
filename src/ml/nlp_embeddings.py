@@ -62,6 +62,7 @@ def cargar_catalogo() -> pd.DataFrame:
             "referencia",
             "fecha",
             "titulo",
+            "formato",
             "subcategoria",
             "marca_propia",
             "es_marca_propia",
@@ -97,14 +98,16 @@ def generar_embeddings(df: pd.DataFrame) -> tuple:
     log.info(f"Cargando modelo: {MODEL_NAME}")
     modelo = SentenceTransformer(MODEL_NAME)
 
-    # Limpiar marca del título para mejorar comparabilidad semántica
-    def limpiar_titulo(titulo: str, marca: str) -> str:
+    # Limpiar marca del título para mejorar comparabilidad semántica e incluir formato
+    def limpiar_titulo(titulo: str, marca: str, formato: str) -> str:
         if marca != "comercial":
             titulo = titulo.replace(marca, "").strip()
+        if pd.notna(formato) and str(formato).strip():
+            titulo = f"{titulo} {formato}"
         return titulo
 
     df["titulo_limpio"] = df.apply(
-        lambda r: limpiar_titulo(r["titulo"], r["marca_propia"]), axis=1
+        lambda r: limpiar_titulo(r["titulo"], r["marca_propia"], r["formato"]), axis=1
     )
 
     titulos = df["titulo_limpio"].tolist()

@@ -10,6 +10,12 @@ const router = createRouter({
       meta: { title: 'Inicio' }
     },
     {
+      path: '/buscador',
+      name: 'buscador',
+      component: () => import('@/views/BuscadorView.vue'),
+      meta: { title: 'Buscador de Productos' }
+    },
+    {
       path: '/ipc',
       name: 'ipc',
       component: () => import('@/views/IPCView.vue'),

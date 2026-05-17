@@ -28,6 +28,7 @@ deportista) que cargan cestas con productos y cantidades típicas.
 """
 
 import pandas as pd
+import numpy as np
 import logging
 from pathlib import Path
 from flask import Flask, jsonify, request
@@ -59,6 +60,7 @@ COLS_CATALOGO = [
     "referencia",
     "fecha",
     "titulo",
+    "formato",
     "categoria",
     "subcategoria",
     "marca_propia",
@@ -818,7 +820,10 @@ def productos():
             df = df[df["marca_propia"] == marca.lower()]
 
     if q := request.args.get("q"):
-        df = df[df["titulo"].str.contains(q.lower(), na=False)]
+        if q.isdigit():
+            df = df[(df["titulo"].str.contains(q.lower(), na=False)) | (df["referencia"] == int(q))]
+        else:
+            df = df[df["titulo"].str.contains(q.lower(), na=False)]
 
     limit = int(request.args.get("limit", 50))
     df = df.head(limit)
@@ -830,9 +835,11 @@ def productos():
                 [
                     "referencia",
                     "titulo",
+                    "formato",
                     "categoria",
                     "subcategoria",
                     "marca_propia",
+                    "es_marca_propia",
                     "precio_actual",
                     "precio_por_medida",
                     "unidad_medida",
@@ -1151,7 +1158,9 @@ def equivalencias():
     df = df[df["similitud"] >= min_sim]
 
     limit = int(request.args.get("limit", 50))
-    df = df.sort_values("similitud", ascending=False).head(limit)
+    df = df.sort_values("similitud", ascending=False)
+    if limit > 0:
+        df = df.head(limit)
 
     cols = [
         "titulo_mp",
@@ -1308,6 +1317,104 @@ def shrinkflation():
             df[col] = df[col].astype(str)
 
     return jsonify({"total": len(df), "alertas": df.astype(object).where(pd.notnull(df), None).to_dict(orient="records")})
+
+
+@app.route("/api/producto/<int:referencia>")
+def detalle_producto(referencia):
+    """
+    Detalles completos de un producto: catálogo, histórico de precios,
+    anomalías, equivalencias NLP y alertas shrinkflation.
+    """
+    match = df_catalogo[df_catalogo["referencia"] == referencia]
+    if match.empty:
+        return jsonify({"error": f"Producto {referencia} no encontrado en el catálogo actual"}), 404
+
+    producto = match.iloc[0].to_dict()
+
+    # Historial de precios
+    hist = df_historico[df_historico["referencia"] == referencia].sort_values("fecha")
+    historial = hist[["fecha", "precio_actual", "precio_por_medida"]].astype(object).where(pd.notnull(hist[["fecha", "precio_actual", "precio_por_medida"]]), None).to_dict(orient="records")
+    for h in historial:
+        h["fecha"] = h["fecha"].date().isoformat()
+
+    # Anomalías (buscando en los dataframes de anomalías si existen)
+    anomalias_list = []
+    if ANOMALIAS_ZS.exists():
+        df_zs = pd.read_parquet(ANOMALIAS_ZS)
+        df_zs = df_zs[(df_zs["referencia"] == referencia) & df_zs["anomalia_zscore"]]
+        for _, row in df_zs.iterrows():
+            anomalias_list.append({
+                "fecha": pd.to_datetime(row["fecha"]).date().isoformat(),
+                "tipo": "Z-Score",
+                "score": float(row["zscore"]) if pd.notnull(row.get("zscore")) else None
+            })
+    if ANOMALIAS_IF.exists():
+        df_if = pd.read_parquet(ANOMALIAS_IF)
+        df_if = df_if[(df_if["referencia"] == referencia) & df_if["anomalia_if"]]
+        for _, row in df_if.iterrows():
+            anomalias_list.append({
+                "fecha": pd.to_datetime(row["fecha"]).date().isoformat(),
+                "tipo": "Isolation Forest",
+                "score": float(row["score_if"]) if pd.notnull(row.get("score_if")) else None
+            })
+
+    anomalias_list.sort(key=lambda x: x["fecha"], reverse=True)
+
+    # Equivalencias NLP
+    equivalencias = []
+    if not df_equiv.empty:
+        equiv_mp = df_equiv[(df_equiv["ref_mp"] == referencia) & (df_equiv["rank"] == 1)]
+        equiv_com = df_equiv[(df_equiv["ref_com"] == referencia) & (df_equiv["rank"] == 1)]
+        for _, row in pd.concat([equiv_mp, equiv_com]).iterrows():
+            es_mp = row["ref_mp"] == referencia
+            ref_alt = row["ref_com"] if es_mp else row["ref_mp"]
+            titulo_alt = row["titulo_com"] if es_mp else row["titulo_mp"]
+            precio_alt = row["precio_com"] if es_mp else row["precio_mp"]
+            tipo_alt = "comercial" if es_mp else "marca_propia"
+            
+            # Buscar formato en el catálogo
+            match_alt = df_catalogo[df_catalogo["referencia"] == ref_alt]
+            formato_alt = match_alt["formato"].iloc[0] if not match_alt.empty else None
+
+            # Calcular el % de diferencia (si tienen la misma unidad)
+            ahorro_pct = None
+            if row.get("misma_unidad", False):
+                precio_actual_medida = producto.get("precio_por_medida")
+                precio_alt_medida = row["precio_medida_com"] if es_mp else row["precio_medida_mp"]
+                if pd.notna(precio_actual_medida) and pd.notna(precio_alt_medida) and precio_actual_medida > 0:
+                    ahorro_pct = ((precio_alt_medida - precio_actual_medida) / precio_actual_medida) * 100
+
+            equivalencias.append({
+                "referencia_alternativa": int(ref_alt),
+                "titulo_alternativa": str(titulo_alt),
+                "formato_alternativa": formato_alt,
+                "tipo_alternativa": tipo_alt,
+                "precio_alternativa": float(precio_alt),
+                "similitud": float(row["similitud"]),
+                "ahorro_pct": float(ahorro_pct) if pd.notna(ahorro_pct) else None
+            })
+
+    # Shrinkflation
+    shrinkflation_alerts = []
+    path_shrink = Path("data/shrinkflation/alertas.parquet")
+    if path_shrink.exists():
+        df_shrink = pd.read_parquet(path_shrink)
+        df_shrink = df_shrink[df_shrink["referencia"] == referencia]
+        for _, row in df_shrink.iterrows():
+            shrinkflation_alerts.append({
+                "fecha_actual": str(row["fecha_actual"]),
+                "fecha_anterior": str(row["fecha_anterior"]),
+                "severidad": float(row["severidad"]),
+                "reduccion_pct": float(row.get("reduccion_pct", 0))
+            })
+
+    return jsonify({
+        "producto": {k: (float(v) if isinstance(v, (np.float32, np.float64)) else v) for k, v in producto.items()},
+        "historial": historial,
+        "anomalias": anomalias_list,
+        "equivalencias": equivalencias,
+        "shrinkflation": shrinkflation_alerts
+    })
 
 
 # ── Arranque ──────────────────────────────────────────────────────────────────

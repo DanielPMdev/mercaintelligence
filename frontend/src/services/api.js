@@ -26,6 +26,9 @@ export const getCategorias = () =>
 export const getProductos = (params = {}) =>
   client.get('/productos', { params }).then(r => r.data)
 
+export const getDetalleProducto = (referencia) =>
+  client.get(`/producto/${referencia}`).then(r => r.data)
+
 // ── Cestas predefinidas ───────────────────────────────────────────────────────
 export const getCestas = () =>
   client.get('/cestas').then(r => r.data)
