@@ -3,6 +3,7 @@
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
 import logging
+import os
 
 log = logging.getLogger(__name__)
 
@@ -24,9 +25,10 @@ def generar_doc_id(referencia, fecha_str: str) -> str:
 
 # ── Cliente ────────────────────────────────────────────────────────────────
 def get_es_client():
-    es = Elasticsearch("http://localhost:9200")
+    host = os.getenv("ES_HOST", "http://localhost:9200")
+    es = Elasticsearch(host)
     if not es.ping():
-        raise ConnectionError("Elasticsearch no disponible en localhost:9200")
+        raise ConnectionError(f"Elasticsearch no disponible en {host}")
     return es
 
 

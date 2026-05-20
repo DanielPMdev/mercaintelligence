@@ -1,0 +1,98 @@
+services:
+  # ── Elasticsearch ────────────────────────────────────────────────────────────
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.29
+    container_name: mercai-es
+    ports:
+      - "127.0.0.1:9200:9200"
+    environment:
+      discovery.type: single-node
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      xpack.security.enabled: "false"
+    volumes:
+      - /e/Dockers/ElasticSearch/es-data:/usr/share/elasticsearch/data
+      #- ./.docker-data/es-data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+    networks:
+      - mercai-net
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ── Kibana ───────────────────────────────────────────────────────────────────
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.29
+    container_name: mercai-kibana
+    ports:
+      - "127.0.0.1:5601:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: http://es01:9200
+      KIBANA_DEFAULTAPPID: "discover"
+    volumes:
+      - /e/Dockers/ElasticSearch/kibana-data:/usr/share/kibana/data
+      #- ./.docker-data/kibana-data:/usr/share/kibana/data
+    restart: unless-stopped
+    depends_on:
+      es01:
+        condition: service_healthy
+    networks:
+      - mercai-net
+
+  # ── API Flask ─────────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: mercai-api
+    ports:
+      - "127.0.0.1:5000:5000"
+    environment:
+      ES_HOST: http://es01:9200 # ES interno, no localhost
+      FLASK_ENV: production
+    volumes:
+      # Montar data/ y models/ como volúmenes — no se copian en la imagen
+      # Así los modelos entrenados persisten sin reconstruir la imagen
+      - ./data:/app/data
+      - ./models:/app/models
+    restart: unless-stopped
+    depends_on:
+      es01:
+        condition: service_healthy
+    networks:
+      - mercai-net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')",
+        ]
+      interval: 20s
+      timeout: 10s
+      retries: 3
+
+  # ── Frontend Vue ──────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: mercai-frontend
+    ports:
+      - "80:80" # accesible en http://localhost
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - mercai-net
+
+networks:
+  mercai-net:
+    driver: bridge

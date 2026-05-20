@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+.git/
+.gitignore
+frontend/node_modules/
+frontend/dist/
+notebooks/
+docs/
+*.md
+*.ipynb

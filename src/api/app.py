@@ -27,12 +27,15 @@ También se pueden usar perfiles predefinidos (familiar, estudiante, vegano,
 deportista) que cargan cestas con productos y cantidades típicas.
 """
 
+import os
 import pandas as pd
 import numpy as np
 import logging
 from pathlib import Path
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+
+ES_HOST = os.getenv("ES_HOST", "http://localhost:9200")
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s — %(message)s")
 log = logging.getLogger(__name__)
@@ -764,6 +767,7 @@ def buscar_alternativas_cesta(productos: list[dict]) -> dict:
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 
+@app.route("/health")
 @app.route("/api/health")
 def health():
     return jsonify(
