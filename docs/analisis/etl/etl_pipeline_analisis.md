@@ -41,11 +41,11 @@ El consolidado histórico abarca casi 6 meses de datos, demostrando la madurez y
 
 | Métrica | Valor |
 |---------|:-----:|
-| **Filas totales procesadas** | 659,997 |
-| **Ficheros CSV consolidados** | 152 |
-| **Rango temporal** | 2025-11-03 → 2026-04-26 |
-| **Productos únicos** | 5,009 |
-| **Documentos indexados en ES** | 668,625 |
+| **Filas totales procesadas** | 763,435 |
+| **Ficheros CSV consolidados** | 176 |
+| **Rango temporal** | 2025-11-03 → 2026-05-20 |
+| **Productos únicos** | 5,101 |
+| **Documentos indexados en ES** | 763,435 |
 
 ### 2.2 Dinámica de Precios y Dominio de Marca
 
@@ -106,7 +106,7 @@ El pipeline integra directamente con Elasticsearch para servir a los dashboards 
 
 ### 5.1 Indexación Base (Datos Raw y Limpios)
 - **Mapping Estricto:** Previene la explosión de campos. Los tipos clave (`keyword` para agregaciones, `text` para búsquedas en `titulo`) están blindados.
-- **Eficiencia Bulk:** Uso de la API `helpers.bulk` para cargas masivas con chunks de 500 documentos, permitiendo la indexación de +660k registros en escasos segundos sin fallos.
+- **Eficiencia Bulk:** Uso de la API `helpers.bulk` para cargas masivas con chunks de 5000 documentos, permitiendo la indexación de +760k registros en escasos segundos sin fallos.
 - **Safe Types:** Función `to_native()` para convertir explícitamente tipos de `numpy` a tipos nativos de Python, evitando errores de serialización JSON.
 
 ### 5.2 Procesos Post-Indexación (ML y Analítica Avanzada)
@@ -116,7 +116,7 @@ Una vez los datos base están indexados y los modelos de Machine Learning o de A
 1. **Detección de Anomalías (`indexar_anomalias_es.py`)**: 
    - Utiliza la API de Update de Elasticsearch para **enriquecer** los documentos existentes en el índice principal (`mercadona-precios`) sin sobrescribirlos.
    - Inyecta de forma eficiente métricas y booleanos calculados: `zscore`, `anomalia_zscore`, `media_local`, `std_local`, `score_if`, `anomalia_if`, `score_ae`, `error_mse` y `anomalia_ae`.
-   - *Rendimiento:* Es capaz de actualizar y enriquecer más de 668,000 documentos asíncronamente (ej. etiquetando 3,293 anomalías Z-Score y 3,343 por Isolation Forest).
+   - *Rendimiento:* Es capaz de actualizar y enriquecer más de 763,000 documentos asíncronamente (ej. etiquetando 3,813 anomalías Z-Score, 3,818 por Isolation Forest y 6,929 por Autoencoder).
    - 🔗 *Más detalles metodológicos en: [Análisis de Anomalías](../anomalias/anomalias_analisis.md)*
 
 2. **Índice de Precios al Consumidor (`indexar_ipc_es.py`)**:

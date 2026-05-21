@@ -171,26 +171,30 @@ def generar_visualizaciones(df: pd.DataFrame) -> None:
     plt.ylabel("Frecuencia")
     plt.legend()
     plt.grid(True, alpha=0.3)
-    plt.tight_layout()
+    caption_dist = "Explicación: Distribución empírica del rolling Z-Score de las variaciones de precios. El umbral establecido en ±2.5 desviaciones típicas (líneas discontinuas rojas) enmarca el comportamiento estadístico habitual; los valores extremos fuera de esta región se clasifican como anomalías Z-Score."
+    plt.figtext(0.5, 0.01, caption_dist, wrap=True, horizontalalignment='center', fontsize=9, style='italic', color='#555555')
+    plt.tight_layout(rect=[0, 0.08, 1, 0.95])
     plt.savefig(IMG_DIR / "zscore_distribucion.png", dpi=150)
     plt.close()
-
+ 
     # 2. Ejemplo de serie temporal con anomalía (el producto con mayor desviación)
     top_anom = df.loc[df["zscore"].abs().idxmax()]
     ref_ejemplo = top_anom["referencia"]
     df_ejemplo = df[df["referencia"] == ref_ejemplo].sort_values("fecha")
-
-    plt.figure(figsize=(12, 5))
-    plt.plot(df_ejemplo["fecha"], df_ejemplo["precio_actual"], marker="o", markers_with_fill=False, label="Precio Real")
+ 
+    plt.figure(figsize=(12, 6))
+    plt.plot(df_ejemplo["fecha"], df_ejemplo["precio_actual"], marker="o", label="Precio Real")
     anomalias_ej = df_ejemplo[df_ejemplo["anomalia_zscore"]]
     plt.scatter(anomalias_ej["fecha"], anomalias_ej["precio_actual"], color="red", s=100, label="Anomalía Detectada", zorder=5)
-    
+     
     plt.title(f"Serie Temporal: {df_ejemplo['titulo'].iloc[0]} (Ref: {ref_ejemplo})")
     plt.xlabel("Fecha")
     plt.ylabel("Precio (€)")
     plt.legend()
     plt.grid(True, alpha=0.3)
-    plt.tight_layout()
+    caption_ej = "Explicación: Ejemplo visual del rolling Z-Score sobre una serie temporal real de precios. El gráfico muestra cómo el score dinámico detecta de forma efectiva el cambio repentino en la serie temporal y resalta las anomalías con círculos rojos en los puntos de precio real."
+    plt.figtext(0.5, 0.01, caption_ej, wrap=True, horizontalalignment='center', fontsize=9, style='italic', color='#555555')
+    plt.tight_layout(rect=[0, 0.08, 1, 0.95])
     plt.savefig(IMG_DIR / "zscore_ejemplo_anomalia.png", dpi=150)
     plt.close()
     

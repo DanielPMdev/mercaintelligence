@@ -28,6 +28,9 @@ logging.basicConfig(
 )
 log = logging.getLogger("ingesta_maestra")
 
+# Silenciar logs HTTP ruidosos del cliente de Elasticsearch
+logging.getLogger("elastic_transport").setLevel(logging.WARNING)
+
 # Asegurar que el path de ejecución incluya src/etl
 curr_dir = Path(__file__).parent.resolve()
 if str(curr_dir) not in sys.path:

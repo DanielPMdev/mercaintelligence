@@ -26,6 +26,7 @@ import pandas as pd
 import logging
 import joblib
 import matplotlib.pyplot as plt
+import matplotlib
 from pathlib import Path
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
@@ -253,32 +254,76 @@ def generar_visualizaciones(df: pd.DataFrame) -> None:
     """Genera gráficas diagnósticas del modelo Isolation Forest."""
     # 1. Histograma de Anomaly Scores
     plt.figure(figsize=(10, 5))
-    plt.hist(df["score_if"], bins=100, color="forestgreen", alpha=0.7, edgecolor="white")
+    plt.hist(
+        df["score_if"], bins=100, color="forestgreen", alpha=0.7, edgecolor="white"
+    )
     # El umbral real es implícito, pero marcamos el P99.5 aprox (contamination=0.005)
     umbral_aprox = df["score_if"].quantile(1 - CONTAMINATION)
-    plt.axvline(umbral_aprox, color="red", linestyle="--", label=f"Umbral aprox (P{100-CONTAMINATION*100})")
+    plt.axvline(
+        umbral_aprox,
+        color="red",
+        linestyle="--",
+        label=f"Umbral aprox (P{100 - CONTAMINATION * 100})",
+    )
     plt.title("Distribución de Scores de Anomalía (Isolation Forest)")
     plt.xlabel("Score (0 = normal, 1 = anómalo)")
     plt.ylabel("Frecuencia")
     plt.legend()
     plt.grid(True, alpha=0.3)
-    plt.tight_layout()
+    caption_score = "Explicación: Distribución de los scores de anomalía estimados por el modelo Isolation Forest. El umbral rojo (fijado por contaminación) separa las observaciones de comportamiento normal (valores bajos) de las anomalías multidimensionales (valores altos de score, a la derecha)."
+    plt.figtext(
+        0.5,
+        0.01,
+        caption_score,
+        wrap=True,
+        horizontalalignment="center",
+        fontsize=9,
+        style="italic",
+        color="#555555",
+    )
+    plt.tight_layout(rect=[0, 0.08, 1, 0.95])
     plt.savefig(IMG_DIR / "if_score_distribucion.png", dpi=150)
     plt.close()
 
     # 2. Análisis de features: Normal vs Anomalía
     # Mostramos cómo cambian las features en los casos anómalos
-    fig, axes = plt.subplots(1, len(FEATURES), figsize=(20, 5))
+
+    try:
+        m_ver = tuple(map(int, matplotlib.__version__.split(".")[:2]))
+    except ValueError:
+        m_ver = (0, 0)
+
+    fig, axes = plt.subplots(1, len(FEATURES), figsize=(20, 6))
     for i, col in enumerate(FEATURES):
         data = [df[~df["anomalia_if"]][col], df[df["anomalia_if"]][col]]
-        axes[i].boxplot(data, labels=["Normal", "Anomalía"], patch_artist=True,
-                        boxprops=dict(facecolor="lightgrey"),
-                        medianprops=dict(color="red"))
+
+        boxplot_kwargs = {
+            "patch_artist": True,
+            "boxprops": dict(facecolor="lightgrey"),
+            "medianprops": dict(color="red"),
+        }
+        if m_ver >= (3, 9):
+            boxplot_kwargs["tick_labels"] = ["Normal", "Anomalía"]
+        else:
+            boxplot_kwargs["labels"] = ["Normal", "Anomalía"]
+
+        axes[i].boxplot(data, **boxplot_kwargs)
         axes[i].set_title(col)
         axes[i].grid(True, alpha=0.3)
-    
+
     plt.suptitle("Comparativa de Características: Normal vs Anomalía")
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    caption_comp = "Explicación: Comparativa de la distribución de características entre transacciones etiquetadas como normales vs anómalas. Permite identificar qué variables (ej. variaciones de precio repentinas o precios extremos) están impulsando la clasificación del Isolation Forest."
+    plt.figtext(
+        0.5,
+        0.01,
+        caption_comp,
+        wrap=True,
+        horizontalalignment="center",
+        fontsize=9,
+        style="italic",
+        color="#555555",
+    )
+    plt.tight_layout(rect=[0, 0.08, 1, 0.93])
     plt.savefig(IMG_DIR / "if_feature_comparison.png", dpi=150)
     plt.close()
 

@@ -22,10 +22,11 @@
 - [x] Personalizar el `README.md` de la carpeta frontend.
 
 ## 2. Infraestructura y Despliegue
-- [ ] Dockerizar la aplicación (crear Dockerfile y docker-compose.yml con la API, Elasticsearch y Kibana).
+- [x] Volver a dockerizar la aplicación con los nuevos modelos ya creados.
 - [ ] Despliegue del contenedor Docker en un entorno de producción (ej. VPS como DigitalOcean, AWS, etc.).
 
 ## 3. Documentación y Entrega (TFE)
-- [ ] Crear el README.md del proyecto con explicación de cada parte, cómo ejecutarlo y cualquier información relevante.
+- [x] Crear el README.md del proyecto con explicación de cada parte, cómo ejecutarlo y cualquier información relevante.
 - [ ] Crear la memoria para el TFE.
+- [ ] Crear la presentacion para la defensa del TFE.
 - [ ] Crear el video-demo del proyecto para YouTube.

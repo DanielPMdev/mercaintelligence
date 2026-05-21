@@ -75,42 +75,48 @@ Cuando no existe predicción LSTM para un par (referencia, fecha), se imputa `pr
 
 ## 3. Resultados: XGBoost vs Baseline Naive
 
+La evaluación del modelo se realiza sobre el conjunto de datos estructurado bajo los siguientes parámetros de partición temporal y volumen de datos de la última ejecución:
+
+- **Datos de origen**: 763,435 filas de series temporales de precios que abarcan 5,101 productos.
+- **Muestras con features**: 547,720 muestras con 25 columnas (21 features predictivas descritas en FEATURE_COLS más variables de identificación y target).
+- **Partición de Entrenamiento (Train)**: 437,053 muestras (histórico completo hasta el 17 de abril de 2026).
+- **Partición de Prueba (Test)**: 110,667 muestras (datos futuros desde el 17 de abril de 2026).
+
 ### 3.1 Evaluación global
 
 | Métrica | XGBoost | Baseline Naive | Diferencia |
 |---|---|---|---|
-| MAE (€) | 0.1462 | **0.0227** | Naive 6.4× mejor |
-| RMSE (€) | 5.6469 | **0.1923** | Naive 29× mejor |
-| R² | 0.7304 | **0.9997** | Naive gana |
-| MAPE (%) | 1.24% | **0.58%** | Naive gana |
+| MAE (€) | 0.1304 | **0.0230** | Naive 5.7× mejor |
+| RMSE (€) | 4.7682 | **0.4210** | Naive 11.3× mejor |
+| R² | 0.7993 | **0.9984** | Naive gana |
+| MAPE (%) | 1.29% | **0.46%** | Naive gana |
 
 > [!IMPORTANT]
 > **El baseline naive supera ampliamente a XGBoost en todas las métricas globales.** Esto no es un fallo del modelo — es una propiedad fundamental del dominio que requiere explicación.
 
 ### 3.2 Por qué la persistencia es óptima: eficiencia del mercado minorista
 
-Los precios de Mercadona tienen una estructura temporal de **"escalón"**: permanecen constantes durante semanas o meses y cambian de forma discreta e impredecible. En el conjunto de test, **el 94.4% de las muestras no presentan cambio de precio** en el horizonte de 7 días.
+Los precios de Mercadona tienen una estructura temporal de **"escalón"**: permanecen constantes durante semanas o meses y cambian de forma discreta e impredecible. En el conjunto de test, **el 95.9% de las muestras no presentan cambio de precio** en el horizonte de 7 días.
 
-En este tipo de serie, el predictor de persistencia (`precio_mañana = precio_hoy`) es correcto por definición el 94.4% del tiempo. Cualquier modelo que intente aprender patrones más complejos introduce ruido en ese 94.4% de casos estables, degradando el rendimiento global.
+En este tipo de serie, el predictor de persistencia (`precio_mañana = precio_hoy`) es correcto por definición el 95.9% del tiempo. Cualquier modelo que intente aprender patrones más complejos introduce ruido en ese 95.9% de casos estables, degradando el rendimiento global.
 
 Este fenómeno es análogo a la **eficiencia de mercado** en finanzas: cuando los precios son "justos" (no cambian sin razón), predecir "sin cambio" es la estrategia dominante. La aportación de un modelo predictivo solo puede medirse en los casos donde el mercado sí se mueve.
 
 ### 3.3 Evaluación condicional: solo muestras con cambio real
 
-Para cuantificar el valor real del modelo, se evalúa exclusivamente el subconjunto donde `target ≠ precio_actual` — es decir, donde la persistencia falla por definición.
+Para cuantificar el valor real del modelo, se evalúa exclusivamente el subconjunto donde `target ≠ precio_actual` — es decir, donde la persistencia falla por definición (4.1% del conjunto de test, equivalente a 4,517 muestras).
 
 | Métrica | XGBoost | Naive | Mejora XGBoost |
 |---|---|---|---|
-| MAE (€) | **0.3978** | 0.4051 | **+1.8%** |
-| MAPE (%) | **8.94%** | 10.26% | **+12.9%** |
-| RMSE (€) | 1.1927 | **0.8118** | -46.9% |
-| R² | 0.9351 | **0.9699** | -3.6% |
+| MAE (€) | 0.9693 | **0.5624** | **-72.4%** |
+| MAPE (%) | **10.75%** | 11.22% | **+4.2%** |
+| RMSE (€) | 11.8740 | **2.0841** | **-470%** |
+| R² | 0.3958 | **0.9814** | **-59.7%** |
 
 **Interpretación:**
-- XGBoost mejora el **error medio** (MAE +1.8%, MAPE +12.9%) en los cambios reales, confirmando que captura algo de la señal de cambio
-- Sin embargo, el **RMSE es significativamente peor** (1.19€ vs 0.81€), lo que indica que cuando XGBoost se equivoca, comete **errores de mayor magnitud** que el naive
-
-La divergencia MAE/RMSE apunta a un patrón claro: XGBoost falla en los **productos caros** (rango 100-500€), donde la magnitud del cambio es mayor y los datos de entrenamiento son más escasos. El scatter plot confirma esta hipótesis (ver §5.1).
+- XGBoost mejora el **error porcentual medio** (MAPE +4.2%) en los cambios reales, confirmando que captura algo de la señal de cambio
+- Sin embargo, el **MAE es un 72.4% peor** (0.97€ vs 0.56€) y el **RMSE es significativamente peor** (11.87€ vs 2.08€), lo que indica que cuando XGBoost se equivoca, comete **errores de gran magnitud** que el naive no comete
+- La divergencia MAE/RMSE apunta a un patrón claro: XGBoost falla en los **productos caros** (rango 100-500€), donde la magnitud del cambio es mayor y los datos de entrenamiento son más escasos. El scatter plot confirma esta hipótesis (ver §5.1).
 
 ---
 
@@ -145,7 +151,7 @@ Se utiliza SHAP (SHapley Additive exPlanations) en lugar de la `feature_importan
 
 La gráfica beeswarm revela tres patrones importantes:
 
-1. **Concentración en cero:** La inmensa mayoría de puntos están agrupados en torno a SHAP = 0 para todas las features. Esto es coherente con que el 94.4% de las muestras no cambian — en esos casos, ninguna feature necesita "empujar" la predicción.
+1. **Concentración en cero:** La inmensa mayoría de puntos están agrupados en torno a SHAP = 0 para todas las features. Esto es coherente con que el 95.9% de las muestras no cambian — en esos casos, ninguna feature necesita "empujar" la predicción.
 
 2. **Outliers extremos en `min_14d`:** Los puntos rosa (valores altos de `min_14d`) alcanzan SHAP values de +80€. Estos son productos caros cuyo precio mínimo reciente ya es alto. Son los mismos casos donde el modelo comete los errores de RMSE más severos — confirma que el modelo tiene dificultades con el segmento premium.
 
@@ -201,22 +207,22 @@ El train crece acumulativamente — cada fold dispone de más datos históricos,
 
 | Fold | Train | Test | MAE (€) | RMSE (€) | R² | MAPE (%) |
 |:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| 1 | 242,704 | 78,808 | **0.0640** | 0.8758 | **0.9935** | 1.17% |
-| 2 | 321,512 | 78,498 | 0.0775 | 3.2208 | 0.9118 | 0.93% |
-| 3 | 400,010 | 81,976 | 0.1446 | 5.6727 | 0.7282 | 1.18% |
-| **Media** | — | — | **0.0954** | **3.2564** | **0.8778** | **1.09%** |
+| 1 | 275,940 | 91,086 | **0.0448** | 0.4283 | **0.9984** | 0.86% |
+| 2 | 367,026 | 90,568 | 0.1110 | 4.2096 | 0.8496 | 1.08% |
+| 3 | 457,594 | 90,126 | 0.1360 | 4.6879 | 0.8042 | 1.36% |
+| **Media** | — | — | **0.0973** | **3.1086** | **0.8841** | **1.10%** |
 
 ### 6.3 Degradación temporal: conexión con el Autoencoder de Anomalías
 
 > [!IMPORTANT]
-> El rendimiento se degrada significativamente entre folds: R² cae de **0.99 → 0.91 → 0.73** y RMSE crece de **0.87 → 3.22 → 5.67**. Esta degradación no es aleatoria — tiene una explicación que conecta el módulo XGBoost con el módulo de detección de anomalías.
+> El rendimiento se degrada significativamente entre folds: R² cae de **0.99 → 0.85 → 0.80** y RMSE crece de **0.43 → 4.21 → 4.69**. Esta degradación no es aleatoria — tiene una explicación que conecta el módulo XGBoost con el módulo de detección de anomalías.
 
 El modelo se entrena predominantemente con datos del período **noviembre 2025 – marzo 2026**, un período de estabilidad de precios. El test del tercer fold cae en **abril-mayo 2026**, que coincide exactamente con el **pico de anomalías detectado por el Autoencoder** en el módulo de análisis de anomalías.
 
 ```
-Fold 1 (test: ene-feb)  → período estable → R² = 0.9935
-Fold 2 (test: feb-mar)  → transición      → R² = 0.9118
-Fold 3 (test: mar-may)  → pico anomalías  → R² = 0.7282
+Fold 1 (test: ene-feb)  → período estable → R² = 0.9984
+Fold 2 (test: feb-mar)  → transición      → R² = 0.8496
+Fold 3 (test: mar-may)  → pico anomalías  → R² = 0.8042
 ```
 
 El modelo nunca vio ese nivel de volatilidad durante el entrenamiento. Los dos módulos — XGBoost (predicción) y Autoencoder (anomalías) — llegan a la misma conclusión por caminos independientes: **algo cambió en los patrones de precio de Mercadona a partir de marzo-abril de 2026**.
@@ -227,18 +233,19 @@ Esta convergencia refuerza la narrativa de que los cambios de precio detectados 
 
 ## 7. Entrenamiento: Observaciones Técnicas
 
-### 7.1 El modelo no alcanzó early stopping
+### 7.1 El modelo alcanzó early stopping
 
 ```
-[  0]  validation_0-mae: 2.1855
-[ 50]  validation_0-mae: 0.2037
-[100]  validation_0-mae: 0.0686
-[150]  validation_0-mae: 0.0608
- ...
-[499]  validation_0-mae: 0.0556    ← Best iteration: 499 (máximo)
+[  0]  validation_0-mae:2.18180
+[ 50]  validation_0-mae:0.25843
+[100]  validation_0-mae:0.12472
+[150]  validation_0-mae:0.11597
+[200]  validation_0-mae:0.11473
+[250]  validation_0-mae:0.11394
+[274]  validation_0-mae:0.11397
 ```
 
-El MAE de validación seguía descendiendo al agotar los 500 árboles permitidos. El early stopping (paciencia = 20) nunca se activó. Esto sugiere que más árboles podrían reducir marginalmente el error, pero la curva de aprendizaje muestra rendimientos decrecientes severos: la mejora entre la iteración 400 y 499 es de apenas 0.004€.
+El MAE de validación alcanzó su punto mínimo en la **iteración 254** (MAE = 0.11394). El entrenamiento finalizó por *early stopping* en la iteración 274 al agotarse la paciencia de 20 épocas consecutivas sin mejora. Esto indica que el modelo convergió de forma óptima a su solución de mínimo error de validación, previniendo con éxito el sobreajuste sin necesidad de agotar los 500 estimadores máximos.
 
 ### 7.2 Hiperparámetros de regularización
 
@@ -257,7 +264,7 @@ El MAE de validación seguía descendiendo al agotar los 500 árboles permitidos
 
 ## 8. Limitaciones Conocidas
 
-1. **Persistencia imbatible globalmente.** En series con estructura de escalón, la predicción trivial `precio_mañana = precio_hoy` es casi óptima. XGBoost solo aporta valor marginal (+1.8% MAE) en el 5.6% de casos donde sí hay cambio.
+1. **Persistencia imbatible globalmente.** En series con estructura de escalón, la predicción trivial `precio_mañana = precio_hoy` es casi óptima. XGBoost solo aporta valor marginal (+4.2% MAPE) en el 4.1% de casos donde sí hay cambio.
 
 2. **Sesgo hacia productos baratos.** El 95% del catálogo tiene precios <30€. El modelo optimiza para ese segmento y comete errores severos en productos caros (400-500€), donde el RMSE se dispara.
 
@@ -265,7 +272,7 @@ El MAE de validación seguía descendiendo al agotar los 500 árboles permitidos
 
 4. **Features de calendario sin impacto.** Día de semana y mes no aportan señal predictiva en este dominio. Mercadona no sigue patrones de pricing estacionales predecibles.
 
-5. **Early stopping no activado.** Los 500 árboles se agotan sin convergencia, lo que sugiere que el modelo aún está aprendiendo ruido residual. No se implementó búsqueda de hiperparámetros (Optuna, Random Search) por estar fuera del alcance del TFE.
+5. **Early stopping activado.** El modelo convergió en la iteración 254, lo que demuestra un correcto comportamiento de regularización. No se implementó búsqueda de hiperparámetros (Optuna, Random Search) por estar fuera del alcance del TFE.
 
 ---
 
@@ -277,11 +284,11 @@ El módulo XGBoost produce tres contribuciones al proyecto:
 
 La comparación con el baseline naive demuestra que los precios de Mercadona son **extremadamente predecibles por persistencia** — una propiedad fundamental del dominio de retail de precios fijos. Este resultado es valioso en sí mismo: establece el **techo de dificultad** contra el cual cualquier modelo predictivo debe medirse.
 
-> **El baseline de persistencia obtiene un MAE de 0.0227€ y un R² de 0.9997, siendo correcto el 94.4% del tiempo.** Cualquier modelo más complejo debe justificar su valor sobre esta referencia.
+> **El baseline de persistencia obtiene un MAE de 0.0230€ y un R² de 0.9984, siendo correcto el 95.9% del tiempo.** Cualquier modelo más complejo debe justificar su valor sobre esta referencia.
 
 ### 9.2 Valor incremental en cambios reales
 
-En el subconjunto donde sí ocurren cambios de precio (5.6% de las muestras), XGBoost mejora el MAE en un 1.8% y el MAPE en un 12.9% respecto al naive. Aunque la mejora es modesta, confirma que el modelo captura señales reales de cambio — particularmente a través de la integración de la probabilidad del LSTM.
+En el subconjunto donde sí ocurren cambios de precio (4.1% de las muestras), XGBoost mejora el MAPE en un 4.2% respecto al naive. Aunque la mejora es modesta, confirma que el modelo captura señales reales de cambio — particularmente a través de la integración de la probabilidad del LSTM.
 
 ### 9.3 Convergencia inter-modular
 
@@ -290,14 +297,14 @@ La integración de tres módulos independientes produce una narrativa coherente:
 ```mermaid
 flowchart TD
     A["LSTM Clasificador<br/>(Sprint 3)"] -->|prob_cambio_lstm<br/>posición 9 en SHAP| B["XGBoost Regresor<br/>(Sprint 4)"]
-    C["Autoencoder Anomalías<br/>(Sprint 2)"] -->|pico anomalías abr-may| D["Walk-forward: R² cae<br/>0.99 → 0.73"]
+    C["Autoencoder Anomalías<br/>(Sprint 2)"] -->|pico anomalías abr-may| D["Walk-forward: R² cae<br/>0.99 → 0.80"]
     B --> D
     A -->|convergencia de señal| E["Validación cruzada<br/>entre modelos"]
 ```
 
 - El **LSTM** genera una señal que **XGBoost valida como informativa** (posición 9/21 en SHAP)
 - El **Autoencoder** detecta anomalías en abril-mayo que **explican la degradación temporal** del XGBoost en walk-forward
-- La combinación LSTM (¿cuándo cambiará?) + XGBoost (¿cuánto costará?) constituye un **sistema complementario** que aborda las dos facetas del problema de predicción de precios
+- La combinación LSTM (detectar cuándo) + XGBoost (estimar cuánto) constituye un **sistema complementario** que aborda las dos facetas del problema de predicción de precios
 
 ---
 

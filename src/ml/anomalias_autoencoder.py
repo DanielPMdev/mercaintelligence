@@ -234,7 +234,7 @@ def entrenar(X_train: np.ndarray) -> tuple:
 def guardar_graficas_entrenamiento(history, X_train, modelo):
     """Genera y guarda las gráficas de entrenamiento y distribución de error."""
     # 1. Curvas de pérdida
-    plt.figure(figsize=(10, 4))
+    plt.figure(figsize=(10, 5))
     plt.plot(history.history["loss"], label="Train Loss")
     plt.plot(history.history["val_loss"], label="Val Loss")
     plt.title("Curvas de entrenamiento - Autoencoder LSTM")
@@ -242,7 +242,9 @@ def guardar_graficas_entrenamiento(history, X_train, modelo):
     plt.ylabel("MSE")
     plt.legend()
     plt.grid(True, alpha=0.3)
-    plt.tight_layout()
+    caption_loss = "Explicación: El gráfico de curvas de entrenamiento muestra la pérdida (MSE) en el conjunto de entrenamiento (azul) y de validación (naranja) a lo largo de las épocas. Una convergencia suave sin divergencia indica un aprendizaje estable y la ausencia de sobreajuste (overfitting)."
+    plt.figtext(0.5, 0.01, caption_loss, wrap=True, horizontalalignment='center', fontsize=9, style='italic', color='#555555')
+    plt.tight_layout(rect=[0, 0.08, 1, 0.95])
     plt.savefig(IMG_DIR / "ae_training_curves_local.png", dpi=150)
     plt.close()
 
@@ -250,13 +252,15 @@ def guardar_graficas_entrenamiento(history, X_train, modelo):
     X_pred_train = modelo.predict(X_train, verbose=0)
     errores_train = np.mean(np.square(X_train - X_pred_train), axis=(1, 2))
 
-    plt.figure(figsize=(10, 4))
+    plt.figure(figsize=(10, 5))
     plt.hist(errores_train, bins=100, alpha=0.7, color="steelblue")
     plt.title("Distribución del error de reconstrucción (Train)")
     plt.xlabel("MSE")
     plt.ylabel("Frecuencia")
     plt.grid(True, alpha=0.3)
-    plt.tight_layout()
+    caption_err = "Explicación: Distribución del error de reconstrucción (MSE) para los datos de entrenamiento. La gran mayoría de los productos normales muestran un error bajo y concentrado a la izquierda. La cola derecha representa reconstrucciones imprecisas, que sirven de base para estimar el umbral de anomalías."
+    plt.figtext(0.5, 0.01, caption_err, wrap=True, horizontalalignment='center', fontsize=9, style='italic', color='#555555')
+    plt.tight_layout(rect=[0, 0.08, 1, 0.95])
     plt.savefig(IMG_DIR / "ae_error_distribution_local.png", dpi=150)
     plt.close()
     log.info(f"Gráficas de entrenamiento guardadas en {IMG_DIR}")

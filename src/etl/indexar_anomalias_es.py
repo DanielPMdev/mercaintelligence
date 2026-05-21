@@ -66,11 +66,13 @@ def indexar_metodo(es: Elasticsearch, path: Path, campos: list[str], nombre: str
 
     log.info(f"Indexando {nombre}: {len(df):,} documentos | campos: {campos}")
 
+    from tqdm import tqdm
     exitos, errores = bulk(
         es,
-        generar_updates(df, campos),
-        chunk_size=500,
+        tqdm(generar_updates(df, campos), total=len(df), desc=f"Subiendo {nombre}"),
+        chunk_size=5000,
         raise_on_error=False,
+        request_timeout=60,
     )
 
     log.info(f"  ✅ {exitos:,} actualizados | {len(errores)} errores")

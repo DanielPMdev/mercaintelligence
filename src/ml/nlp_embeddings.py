@@ -343,7 +343,9 @@ def generar_visualizaciones(
     plt.ylabel("Frecuencia")
     plt.legend()
     plt.grid(True, alpha=0.3)
-    plt.tight_layout()
+    caption_sim = "Explicación: Distribución del score de similitud coseno de los embeddings de texto (SentenceTransformers) entre productos equivalentes. La línea roja en 0.75 representa el umbral mínimo establecido para considerar dos artículos semánticamente equivalentes en el catálogo."
+    plt.figtext(0.5, 0.01, caption_sim, wrap=True, horizontalalignment='center', fontsize=9, style='italic', color='#555555')
+    plt.tight_layout(rect=[0, 0.08, 1, 0.95])
     plt.savefig(IMG_DIR / "similitud_distribucion.png", dpi=150)
     plt.close()
 
@@ -369,7 +371,9 @@ def generar_visualizaciones(
     plt.xlabel("Diferencia de Precio por Medida (%)")
     plt.ylabel("Subcategoría")
     plt.grid(True, axis="x", alpha=0.3)
-    plt.tight_layout()
+    caption_brecha = "Explicación: Distribución de la brecha de precios porcentual entre productos de marca comercial de fabricante frente a sus alternativas de marca blanca de Mercadona. Valores superiores a 0 indican que la marca comercial es proporcionalmente más cara."
+    plt.figtext(0.5, 0.01, caption_brecha, wrap=True, horizontalalignment='center', fontsize=9, style='italic', color='#555555')
+    plt.tight_layout(rect=[0, 0.08, 1, 0.95])
     plt.savefig(IMG_DIR / "brecha_precios.png", dpi=150)
     plt.close()
 
@@ -384,7 +388,7 @@ def generar_visualizaciones(
     tsne = TSNE(n_components=2, random_state=42, perplexity=30)
     vis_dims = tsne.fit_transform(emb_sample)
 
-    plt.figure(figsize=(12, 10))
+    plt.figure(figsize=(12, 11))
     # Colorear por top 10 subcategorías, el resto en gris
     top_10_global = df["subcategoria"].value_counts().head(10).index
     for cat in top_10_global:
@@ -403,7 +407,9 @@ def generar_visualizaciones(
     plt.title(f"Proyección Semántica de Productos (t-SNE sobre {n_sample} items)")
     plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left", title="Subcategorías")
     plt.grid(True, alpha=0.2)
-    plt.tight_layout()
+    caption_proj = "Explicación: Proyección bidimensional t-SNE de los embeddings de alta dimensión del catálogo de productos. La agrupación visual por colores demuestra la capacidad del modelo para estructurar categorías semánticas coherentes en el espacio latente."
+    plt.figtext(0.5, 0.01, caption_proj, wrap=True, horizontalalignment='center', fontsize=9, style='italic', color='#555555')
+    plt.tight_layout(rect=[0, 0.05, 1, 0.95])
     plt.savefig(IMG_DIR / "nlp_proyeccion_embeddings.png", dpi=150)
     plt.close()
 

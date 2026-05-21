@@ -101,19 +101,24 @@ Subcategoría con 1-2 productos comerciales
 
 ## 📊 Distribución General de Calidad
 
-```
-Cuartiles de diferencia por medida (%):
-  25%     +1.5%
-  50%    +45.6%    ← mediana (métrica principal)
-  75%   +115.2%
-  
-Pares en rango razonable (-50% a 200%):  715 de 829 (86.2%)
-Pares con dif > 200%:                    68 (8.2%)
-Pares con dif < -50%:                    46 (5.5%)
-```
+A continuación se muestra la comparación de la distribución de calidad y las brechas calculadas **antes** y **después** de aplicar los filtros de calidad metodológicos (`misma_unidad` y `MIN_COMERCIALES >= 3`):
+
+| Métrica / Distribución | Antes de Filtros Completos (Fase Exploratoria) | Con Filtros Completos (Fase Final / Dashboard) |
+|---|:---:|:---:|
+| **Pares comparables (misma unidad)** | 829 | **892** |
+| **Cuartil 25%** | +1.5% | **+3.7%** |
+| **Cuartil 50% (Mediana)** | +45.6% | **+49.0%** |
+| **Cuartil 75%** | +115.2% | **+108.7%** |
+| **Pares en rango razonable (-50% a 200%)** | 715 de 829 (86.2%) | **791 de 892 (88.7%)** |
+| **Pares con brecha extrema (> 200%)** | 68 (8.2%) | **62 (7.0%)** |
+| **Pares con brecha negativa (< -50%)** | 46 (5.5%) | **39 (4.4%)** |
 
 > [!TIP]
-> El **86.2% de los pares** están en un rango razonable. Los problemas se concentran en las subcategorías con monopolio de match.
+> La aplicación de los filtros no solo incrementó el volumen neto de pares de calidad comparables (al refinar el catálogo actual), sino que además **aumentó el porcentaje de pares en el rango razonable de 86.2% a 88.7%** y **redujo la proporción de brechas extremas erróneas (outliers) del 8.2% al 7.0%**. Esto confirma cuantitativamente que la restricción de dominio por variedad comercial purifica el dataset de anomalías.
+
+
+> [!TIP]
+> El **88.7% de los pares** del catálogo final están en un rango razonable (-50% a 200%). Los problemas remanentes se concentran en contadas subcategorías con dinámicas de precios muy asimétricas de fabricante o limitaciones menores del matching por texto.
 
 ---
 

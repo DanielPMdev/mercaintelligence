@@ -414,19 +414,23 @@ def plot_feature_importance(modelo: XGBRegressor, test: pd.DataFrame) -> None:
     shap_values = explainer(X_sample)
 
     # ── Plot 1: importancia global (bar) ──────────────────────────────────────
-    fig, ax = plt.subplots(figsize=(10, 8))
+    fig, ax = plt.subplots(figsize=(10, 9))
     shap.plots.bar(shap_values, max_display=15, show=False)
     plt.title("XGBoost — SHAP Feature Importance (top 15)")
-    plt.tight_layout()
+    caption_shap_imp = "Explicación: Importancia de las variables basada en valores SHAP. Muestra el impacto medio absoluto sobre las predicciones de precios a 7 días. Las variables históricas de precio y las agregaciones temporales dominan la toma de decisiones."
+    plt.figtext(0.5, 0.01, caption_shap_imp, wrap=True, horizontalalignment='center', fontsize=9, style='italic', color='#555555')
+    plt.tight_layout(rect=[0, 0.05, 1, 0.95])
     plt.savefig(IMG_DIR / "shap_importance.png", dpi=150, bbox_inches="tight")
     plt.show()
     log.info(f"SHAP importance guardada: {IMG_DIR}/shap_importance.png")
 
     # ── Plot 2: beeswarm (impacto por valor de feature) ───────────────────────
-    fig, ax = plt.subplots(figsize=(10, 8))
+    fig, ax = plt.subplots(figsize=(10, 9))
     shap.plots.beeswarm(shap_values, max_display=15, show=False)
     plt.title("XGBoost — SHAP Beeswarm (impacto por valor de feature)")
-    plt.tight_layout()
+    caption_beeswarm = "Explicación: Gráfico Beeswarm de valores SHAP. Cada punto representa un producto en el conjunto de test. La posición en el eje X indica si la característica aumenta (derecha) o disminuye (izquierda) la predicción del precio futuro. El color rojo indica valor alto y el azul valor bajo."
+    plt.figtext(0.5, 0.01, caption_beeswarm, wrap=True, horizontalalignment='center', fontsize=9, style='italic', color='#555555')
+    plt.tight_layout(rect=[0, 0.05, 1, 0.95])
     plt.savefig(IMG_DIR / "shap_beeswarm.png", dpi=150, bbox_inches="tight")
     plt.show()
     log.info(f"SHAP beeswarm guardada: {IMG_DIR}/shap_beeswarm.png")
@@ -440,13 +444,15 @@ def _plot_feature_importance_fallback(modelo: XGBRegressor) -> None:
         .tail(15)
     )
 
-    fig, ax = plt.subplots(figsize=(10, 8))
+    fig, ax = plt.subplots(figsize=(10, 9))
     importance.plot(kind="barh", ax=ax, color="steelblue", alpha=0.8)
     ax.axvline(0, color="black", linewidth=0.5)
     ax.set_title("XGBoost — Feature Importance (top 15)")
     ax.set_xlabel("Importance score")
     ax.grid(True, axis="x", alpha=0.3)
-    plt.tight_layout()
+    caption_fallback = "Explicación: Importancia de las variables (Feature Importance) obtenida nativamente de XGBoost. Representa el peso relativo que tiene cada una de las variables históricas y temporales en la reducción de la varianza del modelo para predecir precios a 7 días."
+    plt.figtext(0.5, 0.01, caption_fallback, wrap=True, horizontalalignment='center', fontsize=9, style='italic', color='#555555')
+    plt.tight_layout(rect=[0, 0.05, 1, 0.95])
     plt.savefig(IMG_DIR / "feature_importance.png", dpi=150, bbox_inches="tight")
     plt.show()
     log.info(f"Feature importance guardada: {IMG_DIR}/feature_importance.png")
@@ -459,7 +465,7 @@ def plot_prediccion_vs_real(test: pd.DataFrame, y_pred: np.ndarray) -> None:
     Una línea diagonal perfecta = predicción perfecta.
     La dispersión alrededor de la diagonal = error del modelo.
     """
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    fig, axes = plt.subplots(1, 2, figsize=(14, 7))
 
     y_test = test["target"].values
 
@@ -491,7 +497,9 @@ def plot_prediccion_vs_real(test: pd.DataFrame, y_pred: np.ndarray) -> None:
     axes[1].grid(True, alpha=0.3)
 
     plt.suptitle(f"XGBoost Regressor — Horizonte {HORIZONTE} días", fontsize=13)
-    plt.tight_layout()
+    caption_pred_real = "Explicación: Gráfica de dispersión comparando el precio real vs la predicción del modelo XGBoost (t+7) en el gráfico izquierdo. La proximidad de los puntos a la diagonal representa alta precisión. El histograma del error en el gráfico derecho muestra la media y dispersión del error de predicción en euros."
+    plt.figtext(0.5, 0.01, caption_pred_real, wrap=True, horizontalalignment='center', fontsize=9, style='italic', color='#555555')
+    plt.tight_layout(rect=[0, 0.06, 1, 0.94])
     plt.savefig(IMG_DIR / "prediccion_vs_real.png", dpi=150, bbox_inches="tight")
     plt.show()
 

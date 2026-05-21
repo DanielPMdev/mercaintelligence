@@ -39,11 +39,11 @@ flowchart LR
 
 | Métrica | Valor |
 |---------|:-----:|
-| Productos en catálogo | 4,310 |
-| Marca propia | 2,857 |
-| Marca comercial | 1,453 |
-| Equivalencias top-1 | **929** |
-| Cobertura (top-1 / MP) | 32.5% |
+| Productos en catálogo | 4,312 |
+| Marca propia | 2,858 |
+| Marca comercial | 1,454 |
+| Equivalencias top-1 | **924** |
+| Cobertura (top-1 / MP) | 32.3% |
 | Similitud media | **0.844** |
 | Similitud mínima | 0.750 |
 
@@ -54,15 +54,15 @@ flowchart LR
 
 | Métrica | Valor |
 |---------|:-----:|
-| Pares comparables (misma unidad) | 897 de 929 |
-| Precio/medida medio marca propia | 5.22€ |
-| Precio/medida medio marca comercial | 7.07€ |
-| **Diferencia mediana (por medida)** | **+48.4%** |
-| Diferencia media (por medida) | +80.8% |
-| Diferencia media (precio absoluto) | +69.2% |
+| Pares comparables (misma unidad) | **892** de **924** (32 excluidos) |
+| Precio/medida medio marca propia | 5.23€ |
+| Precio/medida medio marca comercial | 7.21€ |
+| **Diferencia mediana (por medida)** | **+49.0%** |
+| Diferencia media (por medida) | +82.6% |
+| Diferencia media (precio absoluto) | +70.2% |
 
 > [!IMPORTANT]
-> Se utiliza la **mediana** (+48.4%) como estadístico principal por ser robusta frente a outliers. La media (+80.8%) es más alta por la influencia de subcategorías con grandes primas de marca legítimas (cosmética, limpieza).
+> Se utiliza la **mediana** (+49.0%) como estadístico principal por ser robusta frente a outliers. La media (+82.6%) es más alta por la influencia de subcategorías con grandes primas de marca legítimas (cosmética, limpieza).
 
 ---
 
@@ -108,11 +108,11 @@ Diferencia mediana: +45.6%
 ### Iteración 4: Mínimo de variedad comercial (versión final)
 
 ```
-Diferencia media:   +80.6%
-Diferencia mediana: +51.5%
+Diferencia media:   +82.6%
+Diferencia mediana: +49.0%
 ```
 
-Con `MIN_COMERCIALES=3`, se eliminan las subcategorías sin variedad suficiente. La mediana sube ligeramente de +45.6% a +51.5% porque los pares eliminados eran los de "monopolio de match" que distorsionaban hacia abajo (helados con -60%).
+Con `MIN_COMERCIALES=3`, se eliminan las subcategorías sin variedad suficiente. La mediana sube de +45.6% a +49.0% porque los pares eliminados eran los de "monopolio de match" que distorsionaban hacia abajo.
 
 ---
 
@@ -163,36 +163,50 @@ Todos los helados Hacendado (22 productos) se emparejaban con un único producto
 
 ## 5. Subcategorías con Mayor Brecha: Validación
 
-Tras aplicar todos los filtros, las 5 subcategorías con mayor brecha mediana fueron investigadas individualmente:
+Tras aplicar todos los filtros, las subcategorías con mayor brecha mediana fueron investigadas individualmente para separar las anomalías de los insights de negocio reales:
 
 | Subcategoría | Mediana | N pares | Veredicto |
 |---|:-:|:-:|---|
-| Limpieza vajilla | +717.9% | 7 | 🔴 Inflada por match funcional incorrecto (lavavajillas ↔ limpiamáquinas) |
-| Limpieza muebles | +414.8% | 2 | 🟡 Real pero poco representativa (solo 2 pares) |
-| Otras salsas | +225.2% | 18 | 🟡 Mixta: tomate frito legítimo (+97%), trufa inflada |
-| **Detergente y suavizante** | **+176.0%** | **11** | 🟢 **Legítima** — Ariel cuesta 2-7x más por lavado que Bosque Verde |
-| **Arroz** | **+166.7%** | **7** | 🟢 **Legítima** — matches perfectos con sim >0.92 |
+| Limpieza vajilla | +517.2% | 7 | 🔴 Inflada por match funcional incorrecto (lavavajillas ↔ limpiamáquinas) |
+| Limpieza muebles y multiusos | +258.1% | 2 | 🟡 Real pero poco representativa (solo 2 pares) |
+| **Detergente y suavizante ropa** | **+191.2%** | **13** | 🟢 **Legítima** — Ariel cuesta 2-7x más por lavado que Bosque Verde |
+| **Yogures líquidos** | **+190.7%** | **20** | 🟢 **Legítima** — Actimel/Danacol vs Hacendado (l-casei y cuidacol) |
+| Harina y preparado repostería | +178.3% | 2 | 🟡 Mixta: harina de garbanzo incorrecta (+95%), impulsor Royal perfecto (+262%) |
 
-### Detergente: ejemplo de insight robusto
+### 5.1 Detergente: ejemplo de insight de volumen y dosis
 
 | Bosque Verde | Ariel | €/lavado BV | €/lavado Ariel | Dif. |
 |---|---|:-:|:-:|:-:|
 | Det. prendas delicadas | Ariel líquido | 0.038 | 0.265 | +597% |
 | Det. frescura | Ariel líquido | 0.068 | 0.265 | +290% |
-| Det. color | Ariel líquido | 0.096 | 0.265 | +176% |
-| Det. blanca y color cáps. | Ariel Pods | 0.184 | 0.384 | +109% |
+| Det. de color líquido | Ariel líquido | 0.096 | 0.265 | +176% |
+| Det. blanca y color cáps. | Ariel Pods | 0.194 | 0.384 | +98% |
 
-Todos miden en €/lavado (la unidad correcta para detergentes), con similitudes >0.85. La brecha es real y significativa.
+Todos miden en €/lavado (la unidad de dosis correcta para detergentes), con similitudes >0.89. La brecha es real, significativa y legítima, reflejando el posicionamiento premium del fabricante de marca comercial.
 
-### Arroz: ejemplo de match limpio
+### 5.2 Yogures líquidos: la alternativa funcional de marca propia (L-Casei / Cuidacol)
 
-| Hacendado | Comercial | Similitud | €/kg MP | €/kg COM | Dif. |
+Esta subcategoría destaca por la excelente calidad del matching semántico y la nitidez de su equivalencia de negocio:
+
+| Hacendado (Marca Propia) | Danone (Marca Comercial) | Similitud | €/L MP | €/L COM | Dif. |
 |---|---|:-:|:-:|:-:|:-:|
-| Arroz largo | Arroz largo Sabroz | **0.978** | 1.25 | 4.40 | +252% |
-| Arroz integral largo | Arroz largo Sabroz | **0.964** | 1.65 | 4.40 | +167% |
-| Arroz redondo | La Fallera | **0.954** | 1.20 | 1.69 | +41% |
+| L-Casei Natural 0% mg | Actimel Natural 0% mg | **0.985** | 2.17 | 4.99 | +130.4% |
+| L-Casei Fresa 0% mg | Danacol Fresa 0% mg | **0.980** | 2.17 | 5.45 | +151.5% |
+| Cuidacol Fresa 0% azúcares | Danacol Fresa 0% mg | **0.963** | 3.13 | 5.45 | +74.4% |
+| Cuidacol Natural 0% azúcares | Actimel Natural 0% mg | **0.961** | 3.13 | 4.99 | +59.7% |
 
-El par **arroz redondo Hacendado (1.20€/kg) vs La Fallera (1.69€/kg) = +41%** es el ejemplo más limpio del dataset: similitud 0.954, misma unidad, productos genuinamente equivalentes.
+El NLP asocia perfectamente las variantes funcionales equivalentes (L-Casei ↔ Actimel y Cuidacol ↔ Danacol). El análisis de precios revela que la alternativa comercial llega a costar hasta un **151.5% más por litro** que la opción de marca propia para el mismo beneficio de salud percibido, lo que constituye un insight muy potente para el consumidor.
+
+### 5.3 Arroz: ejemplo de match limpio y estándar
+
+| Hacendado (Marca Propia) | Comercial | Similitud | €/kg MP | €/kg COM | Dif. |
+|---|---|:-:|:-:|:-:|:-:|
+| Arroz redondo | Arroz redondo La Fallera | **0.954** | 1.20 | 1.69 | +40.8% |
+| Arroz largo | Arroz redondo La Fallera | **0.938** | 1.25 | 1.69 | +35.2% |
+| Arroz redondo J Sendra | Arroz redondo La Fallera | **0.936** | 1.60 | 1.69 | +5.6% |
+| Arroz basmati aromático | Arroz redondo sabor La Cigala | **0.919** | 2.10 | 2.45 | +16.7% |
+
+El par **arroz redondo Hacendado (1.20€/kg) vs La Fallera (1.69€/kg) = +40.8%** (con similitud semántica de 0.954) constituye el ejemplo de match directo más limpio del catálogo: misma unidad, misma categoría y productos plenamente intercambiables sin sesgo por formato de envase.
 
 ---
 
@@ -222,16 +236,16 @@ Un filtro ciego sacrifica insights reales por eliminar errores que la mediana ya
 
 ```
 Cuartiles de diferencia por medida (%):
-  25%     +1.5%
-  50%    +48.4%    ← mediana (métrica principal)
-  75%   +115.2%
+  25%     +3.7%
+  50%    +49.0%    ← mediana (métrica principal)
+  75%   +108.7%
   
-Pares en rango razonable (-50% a +200%):  ~86%
-Pares con dif > 200%:                     ~8%
-Pares con dif < -50%:                     ~6%
+Pares en rango razonable (-50% a +200%):  ~89%
+Pares con dif > 200%:                     ~7%
+Pares con dif < -50%:                     ~4%
 ```
 
-El 86% de los pares producen brechas en un rango razonable. Los outliers restantes son mayoritariamente legítimos (primas de marca reales en cosmética, limpieza) o limitaciones del matching semántico documentadas.
+El 89% de los pares producen brechas en un rango razonable. Los outliers restantes son mayoritariamente legítimos (primas de marca reales en cosmética, limpieza) o limitaciones del matching semántico documentadas.
 
 ---
 
@@ -249,11 +263,11 @@ El 86% de los pares producen brechas en un rango razonable. Los outliers restant
 
 ## 9. Conclusión
 
-El pipeline produce **929 equivalencias semánticas** con una similitud media de **0.844**, de las cuales **897 son directamente comparables** por precio/medida.
+El pipeline produce **924 equivalencias semánticas** con una similitud media de **0.844**, de las cuales **892 son directamente comparables** por precio/medida.
 
 La conclusión económica principal:
 
-> **La marca comercial es, en mediana, un 48.4% más cara por unidad de medida que su equivalente de marca propia**, validado mediante similitud semántica ≥ 0.75 entre productos de la misma subcategoría.
+> **La marca comercial es, en mediana, un 49.0% más cara por unidad de medida que su equivalente de marca propia**, validado mediante similitud semántica ≥ 0.75 entre productos de la misma subcategoría.
 
 Los filtros implementados — misma unidad de medida, mínimo de 3 productos comerciales por subcategoría, y mediana como estadístico principal — garantizan que esta cifra sea robusta y defensible.
 
@@ -263,12 +277,18 @@ Los filtros implementados — misma unidad de medida, mínimo de 3 productos com
 
 ### Distribución de similitud coseno
 
+![Distribución de similitud coseno](../../img/nlp/similitud_distribucion.png)
+
 La distribución muestra densidad principal entre 0.78-0.90 con cola hasta 1.0. El pico justo sobre el umbral (0.75-0.78) indica matches borderline que se podrían filtrar subiendo el umbral a 0.80 para un dashboard de producción.
 
 ### Brecha de precio por subcategoría
 
+![Brecha de precio por subcategoría](../../img/nlp/brecha_precios.png)
+
 La gráfica de barras horizontales muestra la mediana de brecha por medida para las 10 subcategorías con más pares, usando solo pares con misma unidad de medida. Todas las barras son positivas tras la aplicación de los filtros de calidad.
 
 ### Proyección t-SNE
+
+![Proyección t-SNE](../../img/nlp/nlp_proyeccion_embeddings.png)
 
 La proyección 2D de los embeddings confirma que el modelo entiende el dominio: productos de la misma subcategoría se agrupan en clusters compactos (coloración cabello, chocolate, cerveza, perfumes), validando la metodología de matching por subcategoría.
