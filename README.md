@@ -165,7 +165,7 @@ El sistema incluye 6 perfiles predefinidos (familiar, estudiante, vegano, deport
 ### Opción A — Docker (recomendado)
 
 ```bash
-git clone https://github.com/tu-usuario/mercaintelligence.git
+git clone https://github.com/DanielPMdev/mercaintelligence.git
 cd mercaintelligence
 docker-compose up -d
 ```
@@ -181,7 +181,7 @@ docker-compose up -d
 
 ```bash
 # 1. Clonar y crear entorno
-git clone https://github.com/tu-usuario/mercaintelligence.git
+git clone https://github.com/DanielPMdev/mercaintelligence.git
 cd mercaintelligence
 python -m venv .venv
 .venv\Scripts\activate       # Windows
@@ -211,6 +211,21 @@ pnpm dev
 ---
 
 ## 📊 Resultados obtenidos
+
+| Módulo | Métrica | Resultado |
+|--------|---------|-----------|
+| Z-Score (14d, 2.5σ) | Tasa de anomalía | 0.50% · 3,813 alertas · 1,683 productos |
+| Isolation Forest | Tasa de anomalía | 0.50% · 3,818 alertas · 59 productos |
+| Autoencoder LSTM | Tasa de anomalía | 1.00% · 6,929 alertas · 1,300 productos |
+| Jaccard ZS ↔ IF ↔ AE | Solapamiento entre métodos | 0.006 / 0.000 / 0.005 — métodos complementarios |
+| LSTM clasificador | AUC-ROC en test | 0.893 vs 0.771 baseline LR |
+| XGBoost regresor | MAPE en cambios reales | 10.75% vs 11.22% baseline naive (+4.2% mejora) |
+| NLP sentence-transformers | Similitud media | 0.844 · 924 equivalencias · brecha mediana +49.0% |
+| K-Means | Silhouette Score (K=5) | 0.441 · 76.0% varianza PCA 2D |
+| Shrinkflation | Casos detectados | 20 alertas · 100% producto fresco · severidad media 12.49 |
+| Catálogo | Rotación detectada | 615 nuevos · 717 descatalogados · pico marzo (+157) |
+
+> Ver análisis detallados por módulo en [`docs/analisis/`](docs/analisis/).
 
 ### Detección de anomalías
 
