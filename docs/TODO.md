@@ -27,6 +27,6 @@
 
 ## 3. Documentación y Entrega (TFE)
 - [x] Crear el README.md del proyecto con explicación de cada parte, cómo ejecutarlo y cualquier información relevante.
-- [ ] Crear la memoria para el TFE.
+- [x] Crear la memoria para el TFE.
 - [ ] Crear la presentacion para la defensa del TFE.
 - [ ] Crear el video-demo del proyecto para YouTube.
