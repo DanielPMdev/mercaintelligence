@@ -40,7 +40,7 @@ XGBoost mejora el error porcentual medio (MAPE +4.2%) en cambios reales, pero el
 
 ### SHAP Importance (bar plot)
 
-![SHAP Feature Importance](file:///e:/Estudios/CE_IAyBD/TFE/mercaintelligence/docs/img/xgboost/shap_importance.png)
+![SHAP Feature Importance](../../../img/xgboost/shap_importance.png)
 
 **Hallazgos**:
 - **`precio_lag_1`** domina con +1.15 — confirma que el modelo esencialmente copia el precio de ayer
@@ -50,7 +50,7 @@ XGBoost mejora el error porcentual medio (MAPE +4.2%) en cambios reales, pero el
 
 ### SHAP Beeswarm
 
-![SHAP Beeswarm](file:///e:/Estudios/CE_IAyBD/TFE/mercaintelligence/docs/img/xgboost/shap_beeswarm.png)
+![SHAP Beeswarm](../../../img/xgboost/shap_beeswarm.png)
 
 **Hallazgos**:
 - Los puntos están muy concentrados en torno a 0 para casi todas las features → la mayoría de muestras no se ven afectadas (precios estables, SHAP ≈ 0)
@@ -61,7 +61,7 @@ XGBoost mejora el error porcentual medio (MAPE +4.2%) en cambios reales, pero el
 
 ## 4. Predicción vs Real
 
-![Predicción vs Real](file:///e:/Estudios/CE_IAyBD/TFE/mercaintelligence/docs/img/xgboost/prediccion_vs_real.png)
+![Predicción vs Real](../../../img/xgboost/prediccion_vs_real.png)
 
 **Hallazgos**:
 - La masa principal sigue bien la diagonal → el modelo funciona para el grueso de productos baratos (0-30€)

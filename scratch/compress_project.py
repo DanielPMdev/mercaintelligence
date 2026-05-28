@@ -3,8 +3,11 @@ import zipfile
 
 
 def compress_project():
-    source_dir = r"e:\Estudios\CE_IAyBD\TFE\mercaintelligence"
-    target_zip = r"e:\Estudios\CE_IAyBD\TFE\IES_Abastos_2025-26_Proyecto_IA_Big_Data_8IA_Daniel_Porras_Morales.zip"
+    source_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    target_zip = os.path.join(
+        os.path.dirname(source_dir),
+        "IES_Abastos_2025-26_Proyecto_IA_Big_Data_8IA_Daniel_Porras_Morales.zip"
+    )
 
     # Let's define the exclusion patterns
     # We ignore node_modules, .git, __pycache__, virtual environments, and caches

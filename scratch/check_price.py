@@ -3,7 +3,8 @@ import pandas as pd
 import glob
 
 def check_price_evolution(referencia):
-    raw_data_path = r'e:\Estudios\CE_IAyBD\TFE\mercaintelligence\data\raw'
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    raw_data_path = os.path.join(project_root, 'data', 'raw')
     csv_files = glob.glob(os.path.join(raw_data_path, '*.csv'))
     
     results = []

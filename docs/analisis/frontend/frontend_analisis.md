@@ -31,7 +31,7 @@ flowchart TD
 
 ## 2. Sistema de Diseño Global y Layout Reactivo
 
-El archivo principal [App.vue](file:///e:/Estudios/CE_IAyBD/TFE/mercaintelligence/frontend/src/App.vue) implementa el diseño maestro y define los tokens visuales del proyecto.
+El archivo principal [App.vue](../../../frontend/src/App.vue) implementa el diseño maestro y define los tokens visuales del proyecto.
 
 ### Tokens de Color (Modo Oscuro Premium)
 
@@ -73,7 +73,7 @@ El contenedor principal (`.app-layout`) utiliza una estructura de rejilla (`CSS 
 
 ### 3.1 Rutas con Carga Perezosa (Lazy Loading)
 
-El enrutador definido en [router/index.js](file:///e:/Estudios/CE_IAyBD/TFE/mercaintelligence/frontend/src/router/index.js) configura las vistas mediante funciones de importación dinámica. Esto optimiza el tamaño inicial de descarga del bundle, dividiendo el código por páginas:
+El enrutador definido en [router/index.js](../../../frontend/src/router/index.js) configura las vistas mediante funciones de importación dinámica. Esto optimiza el tamaño inicial de descarga del bundle, dividiendo el código por páginas:
 
 ```javascript
 const routes = [
@@ -97,7 +97,7 @@ router.afterEach((to) => {
 
 ### 3.2 Capa de Abstracción de la API (Axios Wrapper)
 
-Para garantizar un código limpio y modular, los componentes nunca invocan directamente a la librería Axios. En su lugar, importan funciones semánticas desde el servicio centralizado [api.js](file:///e:/Estudios/CE_IAyBD/TFE/mercaintelligence/frontend/src/services/api.js):
+Para garantizar un código limpio y modular, los componentes nunca invocan directamente a la librería Axios. En su lugar, importan funciones semánticas desde el servicio centralizado [api.js](../../../frontend/src/services/api.js):
 
 ```javascript
 import axios from 'axios'

@@ -61,7 +61,7 @@ Similitud mínima  : 0.751
 
 ### 3.1 Distribución de Similitud
 
-![Distribución de similitud coseno entre productos equivalentes](C:/Users/Daniel PC/.gemini/antigravity/brain/3d7d39d4-3fd0-45bd-bfcd-872ab72af6e8/artifacts/similitud_distribucion.png)
+![Distribución de similitud coseno entre productos equivalentes](../../../img/nlp/similitud_distribucion.png)
 
 **Interpretación:**
 - La distribución es **right-skewed** (cola larga hacia la derecha), lo cual es esperable
@@ -74,7 +74,7 @@ Similitud mínima  : 0.751
 
 ### 3.2 Brecha de Precios por Subcategoría
 
-![Brecha de precio media entre marca comercial y marca propia por subcategoría](C:/Users/Daniel PC/.gemini/antigravity/brain/3d7d39d4-3fd0-45bd-bfcd-872ab72af6e8/artifacts/brecha_precios.png)
+![Brecha de precio media entre marca comercial y marca propia por subcategoría](../../../img/nlp/brecha_precios.png)
 
 **Interpretación:**
 - **Coloración cabello (+110%)**: marca comercial cuesta más del doble → fuerte premium de marca
@@ -86,7 +86,7 @@ Similitud mínima  : 0.751
 
 ### 3.3 Proyección t-SNE
 
-![Proyección t-SNE de embeddings de 1000 productos muestreados, coloreados por subcategoría](C:/Users/Daniel PC/.gemini/antigravity/brain/3d7d39d4-3fd0-45bd-bfcd-872ab72af6e8/artifacts/nlp_proyeccion_embeddings.png)
+![Proyección t-SNE de embeddings de 1000 productos muestreados, coloreados por subcategoría](../../../img/nlp/nlp_proyeccion_embeddings.png)
 
 **Interpretación:**
 - **Clusters claros**: coloración cabello (naranja, extremo izquierdo), chocolate (marrón, derecha), cerveza (gris, centro-inferior), perfume y colonia (verde, inferior-izquierda)
@@ -137,7 +137,7 @@ Similitud mínima  : 0.751
 
 **1. Cambiar el resumen y gráficas para usar `precio_por_medida` como métrica principal**
 
-El campo `diferencia_por_medida` ya existe en el parquet. El cambio es en [resumir()](file:///e:/Estudios/CE_IAyBD/TFE/mercaintelligence/src/ml/nlp_embeddings.py#L228-L272) y [generar_visualizaciones()](file:///e:/Estudios/CE_IAyBD/TFE/mercaintelligence/src/ml/nlp_embeddings.py#L275-L353):
+El campo `diferencia_por_medida` ya existe en el parquet. El cambio es en [resumir()](../../../src/ml/nlp_embeddings.py#L228-L272) y [generar_visualizaciones()](../../../src/ml/nlp_embeddings.py#L275-L353):
 
 ```diff
  # En resumir():
@@ -152,7 +152,7 @@ El campo `diferencia_por_medida` ya existe en el parquet. El cambio es en [resum
 
 **2. Añadir diferencia porcentual basada en precio por medida**
 
-En [encontrar_equivalencias()](file:///e:/Estudios/CE_IAyBD/TFE/mercaintelligence/src/ml/nlp_embeddings.py#L125-L224), añadir:
+En [encontrar_equivalencias()](../../../src/ml/nlp_embeddings.py#L125-L224), añadir:
 ```python
 "diferencia_por_medida_pct": round(
     (producto_com["precio_por_medida"] - producto_mp["precio_por_medida"])

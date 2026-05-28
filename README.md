@@ -170,6 +170,8 @@ cd mercaintelligence
 docker-compose up -d
 ```
 
+> ⚠️ **Nota de portabilidad en Docker:** El archivo `docker-compose.yml` está preconfigurado con rutas absolutas de volumen (`/e/Dockers/ElasticSearch/...`) del disco del autor para persistir los datos de Elasticsearch y Kibana. Para levantarlo en tu sistema sin errores de montaje, edita `docker-compose.yml` y ajusta estas rutas o bien descomenta las líneas alternativas con rutas relativas (`./.docker-data/...`).
+
 | Servicio | URL | Descripción |
 |----------|-----|-------------|
 | Frontend | [http://localhost](http://localhost) | Interfaz de usuario Vue 3 |

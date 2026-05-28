@@ -5,7 +5,7 @@ description = "MercaIntelligence: Sistema de Inteligencia de Mercado y Análisis
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [
-    {name = "Daniel Porras Morales"}
+    {name = "@danieplpmdev"}
 ]
 dependencies = [
     "pandas",
