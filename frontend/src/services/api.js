@@ -6,8 +6,10 @@
 
 import axios from 'axios'
 
+const apiBaseUrl = import.meta.env.VITE_API_URL?.trim() || '/api'
+
 const client = axios.create({
-  baseURL: '/api',
+  baseURL: apiBaseUrl.replace(/\/$/, ''),
   timeout: 30000,  // 30s — los endpoints de IPC pueden tardar
   headers: { 'Content-Type': 'application/json' }
 })
