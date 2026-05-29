@@ -410,30 +410,35 @@ def plot_feature_importance(modelo: XGBRegressor, test: pd.DataFrame) -> None:
     n_sample = min(5000, len(test))
     X_sample = test[FEATURE_COLS].sample(n=n_sample, random_state=42)
 
-    explainer = shap.TreeExplainer(modelo)
-    shap_values = explainer(X_sample)
+    try:
+        explainer = shap.TreeExplainer(modelo)
+        shap_values = explainer(X_sample)
 
-    # ── Plot 1: importancia global (bar) ──────────────────────────────────────
-    fig, ax = plt.subplots(figsize=(10, 9))
-    shap.plots.bar(shap_values, max_display=15, show=False)
-    plt.title("XGBoost — SHAP Feature Importance (top 15)")
-    caption_shap_imp = "Explicación: Importancia de las variables basada en valores SHAP. Muestra el impacto medio absoluto sobre las predicciones de precios a 7 días. Las variables históricas de precio y las agregaciones temporales dominan la toma de decisiones."
-    plt.figtext(0.5, 0.01, caption_shap_imp, wrap=True, horizontalalignment='center', fontsize=9, style='italic', color='#555555')
-    plt.tight_layout(rect=[0, 0.05, 1, 0.95])
-    plt.savefig(IMG_DIR / "shap_importance.png", dpi=150, bbox_inches="tight")
-    plt.show()
-    log.info(f"SHAP importance guardada: {IMG_DIR}/shap_importance.png")
+        # ── Plot 1: importancia global (bar) ──────────────────────────────────────
+        fig, ax = plt.subplots(figsize=(10, 9))
+        shap.plots.bar(shap_values, max_display=15, show=False)
+        plt.title("XGBoost — SHAP Feature Importance (top 15)")
+        caption_shap_imp = "Explicación: Importancia de las variables basada en valores SHAP. Muestra el impacto medio absoluto sobre las predicciones de precios a 7 días. Las variables históricas de precio y las agregaciones temporales dominan la toma de decisiones."
+        plt.figtext(0.5, 0.01, caption_shap_imp, wrap=True, horizontalalignment='center', fontsize=9, style='italic', color='#555555')
+        plt.tight_layout(rect=[0, 0.05, 1, 0.95])
+        plt.savefig(IMG_DIR / "shap_importance.png", dpi=150, bbox_inches="tight")
+        plt.show()
+        log.info(f"SHAP importance guardada: {IMG_DIR}/shap_importance.png")
 
-    # ── Plot 2: beeswarm (impacto por valor de feature) ───────────────────────
-    fig, ax = plt.subplots(figsize=(10, 9))
-    shap.plots.beeswarm(shap_values, max_display=15, show=False)
-    plt.title("XGBoost — SHAP Beeswarm (impacto por valor de feature)")
-    caption_beeswarm = "Explicación: Gráfico Beeswarm de valores SHAP. Cada punto representa un producto en el conjunto de test. La posición en el eje X indica si la característica aumenta (derecha) o disminuye (izquierda) la predicción del precio futuro. El color rojo indica valor alto y el azul valor bajo."
-    plt.figtext(0.5, 0.01, caption_beeswarm, wrap=True, horizontalalignment='center', fontsize=9, style='italic', color='#555555')
-    plt.tight_layout(rect=[0, 0.05, 1, 0.95])
-    plt.savefig(IMG_DIR / "shap_beeswarm.png", dpi=150, bbox_inches="tight")
-    plt.show()
-    log.info(f"SHAP beeswarm guardada: {IMG_DIR}/shap_beeswarm.png")
+        # ── Plot 2: beeswarm (impacto por valor de feature) ───────────────────────
+        fig, ax = plt.subplots(figsize=(10, 9))
+        shap.plots.beeswarm(shap_values, max_display=15, show=False)
+        plt.title("XGBoost — SHAP Beeswarm (impacto por valor de feature)")
+        caption_beeswarm = "Explicación: Gráfico Beeswarm de valores SHAP. Cada punto representa un producto en el conjunto de test. La posición en el eje X indica si la característica aumenta (derecha) o disminuye (izquierda) la predicción del precio futuro. El color rojo indica valor alto y el azul valor bajo."
+        plt.figtext(0.5, 0.01, caption_beeswarm, wrap=True, horizontalalignment='center', fontsize=9, style='italic', color='#555555')
+        plt.tight_layout(rect=[0, 0.05, 1, 0.95])
+        plt.savefig(IMG_DIR / "shap_beeswarm.png", dpi=150, bbox_inches="tight")
+        plt.show()
+        log.info(f"SHAP beeswarm guardada: {IMG_DIR}/shap_beeswarm.png")
+
+    except Exception as e:
+        log.warning(f"SHAP no disponible (error DLL u otro) — usando feature_importances_ estándar: {e}")
+        _plot_feature_importance_fallback(modelo)
 
 
 def _plot_feature_importance_fallback(modelo: XGBRegressor) -> None:

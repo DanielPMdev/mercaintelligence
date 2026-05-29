@@ -280,6 +280,116 @@ def procesar_csv(ruta_csv: str):
     log.info(f"✅ {ruta.name} procesado — {len(df):,} productos ingresados")
 
 
+# ── Pipeline de Actualización de Modelos y Análisis ─────────────────────────────
+def ejecutar_pipeline_actualizaciones():
+    """
+    Ejecuta el pipeline completo de actualizaciones de análisis y modelos de ML/NLP.
+    Actualiza el catálogo, shrinkflation, anomalías, equivalencias y predicciones en la carpeta data/.
+    Si Elasticsearch está habilitado, también actualiza sus índices correspondientes.
+    """
+    log.info("\n" + "="*80)
+    log.info("🚀 INICIANDO PIPELINE DE ACTUALIZACIÓN DE MODELOS Y ANÁLISIS POST-INGESTA")
+    log.info("="*80)
+    start_time = time.time()
+
+    # 1. Configurar sys.path dinámicamente para imports correctos
+    import sys
+    from pathlib import Path
+    src_dir = Path(__file__).resolve().parent.parent
+    if str(src_dir) not in sys.path:
+        sys.path.insert(0, str(src_dir))
+    if str(src_dir / "etl") not in sys.path:
+        sys.path.insert(0, str(src_dir / "etl"))
+    if str(src_dir / "ml") not in sys.path:
+        sys.path.insert(0, str(src_dir / "ml"))
+
+    # 2. Catálogo (Productos nuevos/descatalogados)
+    log.info("\n➡️ [1/7] Actualizando Catálogo (productos nuevos/descatalogados)...")
+    try:
+        import detector_catalogo
+        detector_catalogo.ejecutar()
+        log.info("   ✅ Catálogo actualizado correctamente.")
+    except Exception as e:
+        log.error(f"   ❌ Error al actualizar Catálogo: {e}", exc_info=True)
+
+    # 3. Shrinkflation
+    log.info("\n➡️ [2/7] Detectando Shrinkflation...")
+    try:
+        import detector_shrinkflation
+        detector_shrinkflation.ejecutar()
+        log.info("   ✅ Shrinkflation actualizado correctamente.")
+    except Exception as e:
+        log.error(f"   ❌ Error al detectar Shrinkflation: {e}", exc_info=True)
+
+    # 4. Anomalías (Z-Score, Isolation Forest, Autoencoder LSTM)
+    log.info("\n➡️ [3/7] Calculando Anomalías (Z-Score)...")
+    try:
+        import anomalias_zscore
+        anomalias_zscore.ejecutar()
+        log.info("   ✅ Z-Score completado.")
+    except Exception as e:
+        log.error(f"   ❌ Error en Z-Score: {e}", exc_info=True)
+
+    log.info("\n➡️ [4/7] Calculando Anomalías (Isolation Forest)...")
+    try:
+        import anomalias_isolation_forest
+        anomalias_isolation_forest.ejecutar()
+        log.info("   ✅ Isolation Forest completado.")
+    except Exception as e:
+        log.error(f"   ❌ Error en Isolation Forest: {e}", exc_info=True)
+
+    log.info("\n➡️ [5/7] Calculando Anomalías (Autoencoder LSTM)...")
+    try:
+        import anomalias_autoencoder
+        anomalias_autoencoder.ejecutar()
+        log.info("   ✅ Autoencoder LSTM completado.")
+    except Exception as e:
+        log.error(f"   ❌ Error en Autoencoder LSTM: {e}", exc_info=True)
+
+    # 5. NLP Equivalencias
+    log.info("\n➡️ [6/7] Generando Equivalencias NLP (Embeddings)...")
+    try:
+        import nlp_embeddings
+        nlp_embeddings.ejecutar()
+        log.info("   ✅ Equivalencias NLP completadas.")
+    except Exception as e:
+        log.error(f"   ❌ Error en Equivalencias NLP: {e}", exc_info=True)
+
+    # 6. Predicciones (XGBoost)
+    log.info("\n➡️ [7/7] Generando Predicciones (XGBoost)...")
+    try:
+        import xgboost_prediccion
+        xgboost_prediccion.ejecutar()
+        log.info("   ✅ Predicciones XGBoost completadas.")
+    except Exception as e:
+        log.error(f"   ❌ Error en Predicciones XGBoost: {e}", exc_info=True)
+
+    # 7. Indexación en Elasticsearch (opcional)
+    skip_es = os.getenv("INGESTA_SKIP_ES", "").lower() in {"1", "true", "yes"}
+    if not skip_es:
+        log.info("\n➡️ Indexando resultados enriquecidos en Elasticsearch...")
+        try:
+            import indexar_anomalias_es
+            indexar_anomalias_es.ejecutar()
+            log.info("   ✅ Indexación de Anomalías en ES completada.")
+        except Exception as e:
+            log.warning(f"   ⚠️ No se pudieron indexar las anomalías en ES: {e}")
+
+        try:
+            import indexar_equivalencias_es
+            indexar_equivalencias_es.ejecutar()
+            log.info("   ✅ Indexación de Equivalencias NLP en ES completada.")
+        except Exception as e:
+            log.warning(f"   ⚠️ No se pudieron indexar las equivalencias NLP en ES: {e}")
+    else:
+        log.info("\n⏭️ Omitiendo indexación en Elasticsearch por INGESTA_SKIP_ES")
+
+    elapsed = time.time() - start_time
+    log.info("\n" + "="*80)
+    log.info(f"🎉 PIPELINE DE ACTUALIZACIÓN COMPLETADO EN {elapsed:.2f} SEGUNDOS")
+    log.info("="*80 + "\n")
+
+
 # ── Watchdog handler ──────────────────────────────────────────────────────────
 class NuevoCSVHandler(FileSystemEventHandler):
     def on_created(self, event):
@@ -287,6 +397,7 @@ class NuevoCSVHandler(FileSystemEventHandler):
             # Espera a que termine la escritura antes de leer el CSV.
             esperar_fichero_estable(Path(event.src_path))
             procesar_csv(event.src_path)
+            ejecutar_pipeline_actualizaciones()
 
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────
@@ -315,10 +426,12 @@ if __name__ == "__main__":
         # Modo desarrollo / CI: procesar manualmente uno o varios CSV
         for archivo in args.csv:
             procesar_csv(archivo)
+        ejecutar_pipeline_actualizaciones()
 
     elif args.input_dir:
         # Modo batch para GitHub Actions: procesar el contenido del checkout o de una carpeta local.
         procesar_directorio(args.input_dir)
+        ejecutar_pipeline_actualizaciones()
 
     elif args.watch:
         # Modo producción: vigilar una carpeta local persistente.
