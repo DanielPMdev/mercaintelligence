@@ -1,0 +1,84 @@
+name: Ingesta incremental Mercadona
+
+on:
+  repository_dispatch:
+    types: [mercadona_csv_ready]
+  workflow_dispatch:
+    inputs:
+      csv_name:
+        description: "Nombre opcional del CSV a procesar"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  ingesta:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout MercaIntelligence
+        uses: actions/checkout@v4
+        with:
+          path: mercaintelligence
+          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 0
+
+      - name: Checkout WebScraping_Mercadona
+        uses: actions/checkout@v4
+        with:
+          repository: danielpmprojects/WebScraping_Mercadona
+          path: scraper
+          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        working-directory: mercaintelligence
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Localizar CSV
+        id: csv
+        shell: bash
+        run: |
+          if [ -n "${{ github.event.client_payload.csv_name }}" ]; then
+            CSV="scraper/data/${{ github.event.client_payload.csv_name }}"
+          elif [ -n "${{ inputs.csv_name }}" ]; then
+            CSV="scraper/data/${{ inputs.csv_name }}"
+          else
+            CSV=$(ls -t scraper/data/*_Mercadona_*.csv | head -n 1)
+          fi
+
+          test -f "$CSV"
+          echo "csv_path=$CSV" >> "$GITHUB_OUTPUT"
+          echo "CSV seleccionado: $CSV"
+
+      - name: Ejecutar ingesta incremental
+        working-directory: mercaintelligence
+        env:
+          INGESTA_SKIP_ES: "1"
+        run: |
+          python src/etl/ingesta_incremental.py --csv "../${{ steps.csv.outputs.csv_path }}"
+
+      - name: Commit datos actualizados
+        working-directory: mercaintelligence
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add -f data/raw data/processed data/state
+
+          if git diff --cached --quiet; then
+            echo "No hay cambios que commitear."
+            exit 0
+          fi
+
+          git commit -m "chore(datos): ingesta incremental Mercadona [skip ci]"
+          git pull --rebase --autostash origin main
+          git push origin main
