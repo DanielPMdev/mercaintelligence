@@ -24,9 +24,7 @@ from watchdog.observers import Observer
 from es_utils import get_es_client, bulk_index
 
 # ── Configuración ────────────────────────────────────────────────────────────
-CARPETA_WATCH_POR_DEFECTO = Path(
-    os.getenv("INGESTA_WATCH_DIR", Path.cwd())
-)
+CARPETA_WATCH_POR_DEFECTO = Path(os.getenv("INGESTA_WATCH_DIR", Path.cwd()))
 PARTITIONED_DIR = Path("data/processed")  # directorio particionado por fecha
 ULTIMO_PRECIO_PATH = Path("data/state/ultimo_precio.parquet")
 ES_INDEX = "mercadona-precios"
@@ -34,6 +32,7 @@ MARCAS_PROPIAS = ["hacendado", "bosque verde", "deliplus", "compy"]
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s — %(message)s")
 log = logging.getLogger(__name__)
+
 
 # ── Cliente Elasticsearch (levantado con Docker) ──────────────────────────────
 def crear_cliente_elasticsearch():
@@ -187,6 +186,19 @@ def actualizar_parquet(nuevo: pd.DataFrame):
     # Usamos assign para no mutar in-place y afectar pasos posteriores del pipeline
     df_save = nuevo.assign(fecha=pd.to_datetime(nuevo["fecha"]).dt.strftime("%Y-%m-%d"))
 
+    # Para asegurar la idempotencia y evitar duplicación por acumulación de ficheros parquet,
+    # eliminamos la carpeta de la partición de cada fecha antes de escribirla de nuevo.
+    import shutil
+
+    for date_str in df_save["fecha"].unique():
+        part_path = PARTITIONED_DIR / f"fecha={date_str}"
+        if part_path.exists():
+            log.info(f"   Limpiando partición existente para la fecha {date_str}...")
+            try:
+                shutil.rmtree(part_path)
+            except Exception as e:
+                log.warning(f"   No se pudo limpiar la partición {part_path}: {e}")
+
     df_save.to_parquet(
         PARTITIONED_DIR,
         partition_cols=["fecha"],
@@ -287,14 +299,17 @@ def ejecutar_pipeline_actualizaciones():
     Actualiza el catálogo, shrinkflation, anomalías, equivalencias y predicciones en la carpeta data/.
     Si Elasticsearch está habilitado, también actualiza sus índices correspondientes.
     """
-    log.info("\n" + "="*80)
-    log.info("🚀 INICIANDO PIPELINE DE ACTUALIZACIÓN DE MODELOS Y ANÁLISIS POST-INGESTA")
-    log.info("="*80)
+    log.info("\n" + "=" * 80)
+    log.info(
+        "🚀 INICIANDO PIPELINE DE ACTUALIZACIÓN DE MODELOS Y ANÁLISIS POST-INGESTA"
+    )
+    log.info("=" * 80)
     start_time = time.time()
 
     # 1. Configurar sys.path dinámicamente para imports correctos
     import sys
     from pathlib import Path
+
     src_dir = Path(__file__).resolve().parent.parent
     if str(src_dir) not in sys.path:
         sys.path.insert(0, str(src_dir))
@@ -307,6 +322,7 @@ def ejecutar_pipeline_actualizaciones():
     log.info("\n➡️ [1/7] Actualizando Catálogo (productos nuevos/descatalogados)...")
     try:
         import detector_catalogo
+
         detector_catalogo.ejecutar()
         log.info("   ✅ Catálogo actualizado correctamente.")
     except Exception as e:
@@ -316,6 +332,7 @@ def ejecutar_pipeline_actualizaciones():
     log.info("\n➡️ [2/7] Detectando Shrinkflation...")
     try:
         import detector_shrinkflation
+
         detector_shrinkflation.ejecutar()
         log.info("   ✅ Shrinkflation actualizado correctamente.")
     except Exception as e:
@@ -325,6 +342,7 @@ def ejecutar_pipeline_actualizaciones():
     log.info("\n➡️ [3/7] Calculando Anomalías (Z-Score)...")
     try:
         import anomalias_zscore
+
         anomalias_zscore.ejecutar()
         log.info("   ✅ Z-Score completado.")
     except Exception as e:
@@ -333,6 +351,7 @@ def ejecutar_pipeline_actualizaciones():
     log.info("\n➡️ [4/7] Calculando Anomalías (Isolation Forest)...")
     try:
         import anomalias_isolation_forest
+
         anomalias_isolation_forest.ejecutar()
         log.info("   ✅ Isolation Forest completado.")
     except Exception as e:
@@ -341,6 +360,7 @@ def ejecutar_pipeline_actualizaciones():
     log.info("\n➡️ [5/7] Calculando Anomalías (Autoencoder LSTM)...")
     try:
         import anomalias_autoencoder
+
         anomalias_autoencoder.ejecutar()
         log.info("   ✅ Autoencoder LSTM completado.")
     except Exception as e:
@@ -350,6 +370,7 @@ def ejecutar_pipeline_actualizaciones():
     log.info("\n➡️ [6/7] Generando Equivalencias NLP (Embeddings)...")
     try:
         import nlp_embeddings
+
         nlp_embeddings.ejecutar()
         log.info("   ✅ Equivalencias NLP completadas.")
     except Exception as e:
@@ -359,6 +380,7 @@ def ejecutar_pipeline_actualizaciones():
     log.info("\n➡️ [7/7] Generando Predicciones (XGBoost)...")
     try:
         import xgboost_prediccion
+
         xgboost_prediccion.ejecutar()
         log.info("   ✅ Predicciones XGBoost completadas.")
     except Exception as e:
@@ -370,6 +392,7 @@ def ejecutar_pipeline_actualizaciones():
         log.info("\n➡️ Indexando resultados enriquecidos en Elasticsearch...")
         try:
             import indexar_anomalias_es
+
             indexar_anomalias_es.ejecutar()
             log.info("   ✅ Indexación de Anomalías en ES completada.")
         except Exception as e:
@@ -377,6 +400,7 @@ def ejecutar_pipeline_actualizaciones():
 
         try:
             import indexar_equivalencias_es
+
             indexar_equivalencias_es.ejecutar()
             log.info("   ✅ Indexación de Equivalencias NLP en ES completada.")
         except Exception as e:
@@ -385,9 +409,9 @@ def ejecutar_pipeline_actualizaciones():
         log.info("\n⏭️ Omitiendo indexación en Elasticsearch por INGESTA_SKIP_ES")
 
     elapsed = time.time() - start_time
-    log.info("\n" + "="*80)
+    log.info("\n" + "=" * 80)
     log.info(f"🎉 PIPELINE DE ACTUALIZACIÓN COMPLETADO EN {elapsed:.2f} SEGUNDOS")
-    log.info("="*80 + "\n")
+    log.info("=" * 80 + "\n")
 
 
 # ── Watchdog handler ──────────────────────────────────────────────────────────

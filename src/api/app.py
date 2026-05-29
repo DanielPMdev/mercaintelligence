@@ -75,6 +75,7 @@ COLS_CATALOGO = [
 
 df_historico = pd.read_parquet(PARTITIONED_DIR, columns=COLS_CATALOGO)
 df_historico["fecha"] = pd.to_datetime(df_historico["fecha"].astype(str))
+df_historico = df_historico.drop_duplicates(subset=["referencia", "fecha"])
 df_historico = df_historico.sort_values(["referencia", "fecha"])
 
 FECHA_BASE = df_historico["fecha"].min()
