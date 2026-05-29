@@ -22,7 +22,7 @@ jobs:
         with:
           path: mercaintelligence
           token: ${{ secrets.PAT_TOKEN }}
-          fetch-depth: 0
+          fetch-depth: 0 # Es importante mantener el 0 para tener el histórico al sincronizar
 
       - name: Checkout WebScraping_Mercadona
         uses: actions/checkout@v4
@@ -76,9 +76,22 @@ jobs:
 
           if git diff --cached --quiet; then
             echo "No hay cambios que commitear."
-            exit 0
+            # No salimos con exit 0 completo si queremos que siempre sincronice por seguridad,
+            # pero asumimos que si no hay cambios, no hace falta forzar push a HF.
+            # Aun así, dejamos que continúe el workflow si quieres asegurar el despliegue.
+          else
+            git commit -m "chore(datos): ingesta incremental Mercadona [skip ci]"
+            git pull --rebase --autostash origin main
+            git push origin main
           fi
 
-          git commit -m "chore(datos): ingesta incremental Mercadona [skip ci]"
-          git pull --rebase --autostash origin main
-          git push origin main
+      - name: Sincronizar hacia Hugging Face Spaces
+        working-directory: mercaintelligence
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # Añadimos el repositorio remoto de Hugging Face usando el token para autenticarnos
+          git remote add hf https://danielpmdev:$HF_TOKEN@huggingface.co/spaces/danielpmdev/mercaintelligence-backend
+          
+          # Forzamos el push de la rama local actual hacia la rama main de Hugging Face
+          git push -f hf HEAD:main
