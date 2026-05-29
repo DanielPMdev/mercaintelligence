@@ -1,9 +1,6 @@
 # Custom Project Patterns (mercaintelligence)
 _pyrefly_virtual_/
 
-# Data files
-data/
-
 # Models
 models/
 *.h5

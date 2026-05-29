@@ -1,12 +1,18 @@
 """
 ingesta_incremental.py
 
-Modo desarrollo : python ingesta_incremental.py --csv <ruta_al_csv> <ruta_al_csv2>
-Modo producción : python ingesta_incremental.py --watch
-                  (vigilará la carpeta del runner y procesará cada CSV nuevo)
+Modos de uso:
+    - CSV puntual: python ingesta_incremental.py --csv <ruta_al_csv> <ruta_al_csv2>
+    - Carpeta local una sola vez: python ingesta_incremental.py --input-dir <ruta_carpeta>
+    - Vigilancia local: python ingesta_incremental.py --watch --watch-dir <ruta_carpeta>
+
+La vigilancia solo funciona sobre una carpeta local del runner o de la máquina
+que ejecuta el proceso. En GitHub Actions suele ser mejor procesar el CSV recién
+generado con --csv o la carpeta del checkout con --input-dir.
 """
 
 import argparse
+import os
 import logging
 import shutil
 import time
@@ -18,8 +24,8 @@ from watchdog.observers import Observer
 from es_utils import get_es_client, bulk_index
 
 # ── Configuración ────────────────────────────────────────────────────────────
-CARPETA_RUNNER = Path(
-    r"C:\actions-runner\_work\WebScraping_Mercadona\WebScraping_Mercadona\samples"
+CARPETA_WATCH_POR_DEFECTO = Path(
+    os.getenv("INGESTA_WATCH_DIR", Path.cwd())
 )
 PARTITIONED_DIR = Path("data/processed")  # directorio particionado por fecha
 ULTIMO_PRECIO_PATH = Path("data/state/ultimo_precio.parquet")
@@ -30,7 +36,20 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s — %(message)s")
 log = logging.getLogger(__name__)
 
 # ── Cliente Elasticsearch (levantado con Docker) ──────────────────────────────
-es = get_es_client()
+def crear_cliente_elasticsearch():
+    """Devuelve un cliente ES disponible o None si la indexacion esta desactivada."""
+    if os.getenv("INGESTA_SKIP_ES", "").lower() in {"1", "true", "yes"}:
+        log.info("   Elasticsearch desactivado por INGESTA_SKIP_ES")
+        return None
+
+    try:
+        return get_es_client()
+    except Exception as e:
+        log.warning(f"   Elasticsearch no disponible - se omitira indexacion: {e}")
+        return None
+
+
+es = crear_cliente_elasticsearch()
 
 
 # ── Limpieza (misma lógica que consolidar_historico.py) ──────────────────────
@@ -181,11 +200,55 @@ def actualizar_parquet(nuevo: pd.DataFrame):
 
 # ── Indexar en Elasticsearch ──────────────────────────────────────────────────
 def indexar_en_elasticsearch(df: pd.DataFrame):
-    if not es.ping():
-        log.warning("   Elasticsearch no disponible — omitiendo indexación")
+    if es is None:
+        log.warning("   Elasticsearch no configurado - omitiendo indexacion")
+        return
+
+    try:
+        if not es.ping():
+            log.warning("   Elasticsearch no disponible - omitiendo indexacion")
+            return
+    except Exception as e:
+        log.warning(f"   Error al comprobar Elasticsearch - omitiendo indexacion: {e}")
         return
 
     bulk_index(es, df)
+
+
+def procesar_directorio(ruta_directorio: str):
+    """Procesa todos los CSV de una carpeta local una sola vez."""
+    directorio = Path(ruta_directorio)
+
+    if not directorio.exists():
+        log.error(f"   La carpeta no existe: {directorio}")
+        return
+
+    csvs = sorted(directorio.glob("*.csv"))
+    if not csvs:
+        log.warning(f"   No se encontraron CSV en {directorio}")
+        return
+
+    log.info(f"📂 Procesando {len(csvs):,} CSV desde: {directorio}")
+    for ruta_csv in csvs:
+        procesar_csv(str(ruta_csv))
+
+
+def esperar_fichero_estable(ruta: Path, reintentos: int = 10, pausa: float = 1.0):
+    """Espera a que el fichero termine de escribirse comprobando que su tamaño se estabiliza."""
+    tamaño_anterior = -1
+    for _ in range(reintentos):
+        if not ruta.exists():
+            time.sleep(pausa)
+            continue
+
+        tamaño_actual = ruta.stat().st_size
+        if tamaño_actual == tamaño_anterior:
+            return
+
+        tamaño_anterior = tamaño_actual
+        time.sleep(pausa)
+
+    log.warning(f"   El fichero tardó en estabilizarse: {ruta}")
 
 
 # ── Pipeline principal ────────────────────────────────────────────────────────
@@ -221,8 +284,8 @@ def procesar_csv(ruta_csv: str):
 class NuevoCSVHandler(FileSystemEventHandler):
     def on_created(self, event):
         if not event.is_directory and event.src_path.endswith(".csv"):
-            # Pequeña espera para asegurar que el fichero está completamente escrito
-            time.sleep(2)
+            # Espera a que termine la escritura antes de leer el CSV.
+            esperar_fichero_estable(Path(event.src_path))
             procesar_csv(event.src_path)
 
 
@@ -233,24 +296,43 @@ if __name__ == "__main__":
         "--csv", nargs="+", help="Procesar uno o varios CSV (modo desarrollo)"
     )
     parser.add_argument(
+        "--input-dir",
+        help="Procesar una carpeta local con CSV una sola vez y salir",
+    )
+    parser.add_argument(
         "--watch",
         action="store_true",
-        help="Vigilar carpeta del runner (modo producción)",
+        help="Vigilar una carpeta local del runner o de la máquina",
+    )
+    parser.add_argument(
+        "--watch-dir",
+        default=None,
+        help="Carpeta local a vigilar cuando se use --watch",
     )
     args = parser.parse_args()
 
     if args.csv:
-        # Modo desarrollo: procesar manualmente un CSV
+        # Modo desarrollo / CI: procesar manualmente uno o varios CSV
         for archivo in args.csv:
             procesar_csv(archivo)
 
+    elif args.input_dir:
+        # Modo batch para GitHub Actions: procesar el contenido del checkout o de una carpeta local.
+        procesar_directorio(args.input_dir)
+
     elif args.watch:
-        # Modo producción: vigilar carpeta indefinidamente
-        log.info(f"👁️  Vigilando: {CARPETA_RUNNER}")
+        # Modo producción: vigilar una carpeta local persistente.
+        carpeta_vigilada = Path(args.watch_dir or CARPETA_WATCH_POR_DEFECTO).resolve()
+
+        if not carpeta_vigilada.exists():
+            log.error(f"   La carpeta a vigilar no existe: {carpeta_vigilada}")
+            raise SystemExit(1)
+
+        log.info(f"👁️  Vigilando: {carpeta_vigilada}")
         log.info("   Ctrl+C para detener")
         handler = NuevoCSVHandler()
         observer = Observer()
-        observer.schedule(handler, str(CARPETA_RUNNER), recursive=False)
+        observer.schedule(handler, str(carpeta_vigilada), recursive=False)
         observer.start()
         try:
             while True:
