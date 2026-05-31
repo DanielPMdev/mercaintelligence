@@ -1,13 +1,8 @@
 # Custom Project Patterns (mercaintelligence)
 _pyrefly_virtual_/
 
-# Models
-models/
-*.h5
-*.pkl
-*.joblib
-*.onnx
-*.pth
+# Models — tracked via Git LFS (see .gitattributes), NOT ignored
+# *.keras, *.pkl, *.h5, *.onnx, *.pth → committed through LFS
 
 #----------------------------------------------------------------
 # Byte-compiled / optimized / DLL files
