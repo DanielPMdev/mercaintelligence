@@ -42,6 +42,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install -r requirements-ml.txt
 
       - name: Localizar CSV
         id: csv
@@ -90,8 +91,8 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          # Añadimos el repositorio remoto de Hugging Face usando el token para autenticarnos
-          git remote add hf https://danielpmdev:$HF_TOKEN@huggingface.co/spaces/danielpmdev/mercaintelligence-backend
+          # Instalar la librería huggingface_hub para sincronización directa
+          pip install huggingface_hub
           
-          # Forzamos el push de la rama local actual hacia la rama main de Hugging Face
-          git push -f hf HEAD:main
+          # Subir la aplicación y datos de manera directa vía API HTTP (con soporte automático para LFS y eliminación de archivos obsoletos en el remoto)
+          huggingface-cli upload danielpmdev/mercaintelligence-backend . --repo-type=space --token=$HF_TOKEN --delete="*" --exclude=".git/*" --exclude=".github/*" --exclude="frontend/*" --exclude="notebooks/*" --exclude="dashboards/*" --exclude="docs/*" --exclude="*.ipynb" --exclude="**/__pycache__/*" --exclude="*.pyc"
