@@ -113,10 +113,10 @@ def generar_embeddings(df: pd.DataFrame) -> tuple:
     titulos = df["titulo_limpio"].tolist()
     log.info(f"Generando embeddings para {len(titulos):,} productos...")
 
-    # batch_size=64 equilibra velocidad y uso de RAM en CPU
+    # batch_size=32 equilibra velocidad y uso de RAM en CPU (GitHub Actions: ~7GB RAM)
     embeddings = modelo.encode(
         titulos,
-        batch_size=64,
+        batch_size=32,
         show_progress_bar=True,
         normalize_embeddings=True,  # normalizar → coseno = producto escalar
     )

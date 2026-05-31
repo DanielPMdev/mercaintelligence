@@ -367,11 +367,20 @@ def ejecutar_pipeline_actualizaciones():
         log.error(f"   ❌ Error en Autoencoder LSTM: {e}", exc_info=True)
 
     # 5. NLP Equivalencias
+    # NOTA: gc.collect() antes del paso NLP es importante — libera tensores
+    # y objetos de TensorFlow (paso 5) antes de que PyTorch (sentence-transformers)
+    # empiece a cargar su propio runtime. La fix principal es que TF se importa
+    # de forma diferida (no al nivel de módulo), pero el gc.collect() añade
+    # una capa extra de protección ante la presión de memoria en GitHub Actions.
+    import gc
+    gc.collect()
+
     log.info("\n➡️ [6/7] Generando Equivalencias NLP (Embeddings)...")
     try:
         import nlp_embeddings
 
         nlp_embeddings.ejecutar()
+        gc.collect()
         log.info("   ✅ Equivalencias NLP completadas.")
     except Exception as e:
         log.error(f"   ❌ Error en Equivalencias NLP: {e}", exc_info=True)
