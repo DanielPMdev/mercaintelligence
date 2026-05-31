@@ -34,6 +34,9 @@ import joblib
 import matplotlib.pyplot as plt
 from pathlib import Path
 
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, LSTM, Dense, RepeatVector, TimeDistributed
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s — %(message)s")
 log = logging.getLogger(__name__)
 
@@ -54,7 +57,9 @@ MIN_DIAS = 20  # productos con menos días se excluyen del entrenamiento
 EPOCHS = 30
 BATCH_SIZE = 64
 VALIDATION_SPLIT = 0.1
-PERCENTIL_UMBRAL_INFERENCIA = 99  # Umbral = P99 del error de reconstrucción en TODA la inferencia
+PERCENTIL_UMBRAL_INFERENCIA = (
+    99  # Umbral = P99 del error de reconstrucción en TODA la inferencia
+)
 
 
 # ── Preparación de datos ──────────────────────────────────────────────────────
@@ -170,8 +175,6 @@ def construir_modelo(ventana: int, n_features: int):
       LSTM(64, return_sequences=True) → expande a resolución original
       TimeDistributed(Dense(n_features)) → reconstruye cada paso temporal
     """
-    from tensorflow.keras.models import Model
-    from tensorflow.keras.layers import Input, LSTM, Dense, RepeatVector, TimeDistributed
 
     inputs = Input(shape=(ventana, n_features), name="input_secuencia")
 
@@ -245,7 +248,16 @@ def guardar_graficas_entrenamiento(history, X_train, modelo):
     plt.legend()
     plt.grid(True, alpha=0.3)
     caption_loss = "Explicación: El gráfico de curvas de entrenamiento muestra la pérdida (MSE) en el conjunto de entrenamiento (azul) y de validación (naranja) a lo largo de las épocas. Una convergencia suave sin divergencia indica un aprendizaje estable y la ausencia de sobreajuste (overfitting)."
-    plt.figtext(0.5, 0.01, caption_loss, wrap=True, horizontalalignment='center', fontsize=9, style='italic', color='#555555')
+    plt.figtext(
+        0.5,
+        0.01,
+        caption_loss,
+        wrap=True,
+        horizontalalignment="center",
+        fontsize=9,
+        style="italic",
+        color="#555555",
+    )
     plt.tight_layout(rect=[0, 0.08, 1, 0.95])
     plt.savefig(IMG_DIR / "ae_training_curves_local.png", dpi=150)
     plt.close()
@@ -261,13 +273,20 @@ def guardar_graficas_entrenamiento(history, X_train, modelo):
     plt.ylabel("Frecuencia")
     plt.grid(True, alpha=0.3)
     caption_err = "Explicación: Distribución del error de reconstrucción (MSE) para los datos de entrenamiento. La gran mayoría de los productos normales muestran un error bajo y concentrado a la izquierda. La cola derecha representa reconstrucciones imprecisas, que sirven de base para estimar el umbral de anomalías."
-    plt.figtext(0.5, 0.01, caption_err, wrap=True, horizontalalignment='center', fontsize=9, style='italic', color='#555555')
+    plt.figtext(
+        0.5,
+        0.01,
+        caption_err,
+        wrap=True,
+        horizontalalignment="center",
+        fontsize=9,
+        style="italic",
+        color="#555555",
+    )
     plt.tight_layout(rect=[0, 0.08, 1, 0.95])
     plt.savefig(IMG_DIR / "ae_error_distribution_local.png", dpi=150)
     plt.close()
     log.info(f"Gráficas de entrenamiento guardadas en {IMG_DIR}")
-
-
 
 
 # ── Detección en todo el histórico ───────────────────────────────────────────
@@ -287,10 +306,12 @@ def detectar_anomalias(df: pd.DataFrame, modelo: Model, umbral: float) -> pd.Dat
         umbral = float(np.percentile(errores, PERCENTIL_UMBRAL_INFERENCIA))
         umbral_data = {
             "umbral": umbral,
-            "metodo": f"percentil_{PERCENTIL_UMBRAL_INFERENCIA}_inferencia"
+            "metodo": f"percentil_{PERCENTIL_UMBRAL_INFERENCIA}_inferencia",
         }
         joblib.dump(umbral_data, UMBRAL_PATH)
-        log.info(f"Umbral (P{PERCENTIL_UMBRAL_INFERENCIA}) calculado y guardado en {UMBRAL_PATH}")
+        log.info(
+            f"Umbral (P{PERCENTIL_UMBRAL_INFERENCIA}) calculado y guardado en {UMBRAL_PATH}"
+        )
 
     # Normalizar error a [0,1] para comparabilidad con score_if
     rango_err = errores.max() - errores.min()
@@ -437,7 +458,9 @@ def cargar_modelo_pretrained() -> tuple:
         # Compatibilidad con formato antiguo (float) y nuevo (dict)
         if isinstance(umbral_data, dict):
             umbral = umbral_data["umbral"]
-            metodo = umbral_data.get("metodo", f"mean+{umbral_data.get('n_sigmas', '?')}σ")
+            metodo = umbral_data.get(
+                "metodo", f"mean+{umbral_data.get('n_sigmas', '?')}σ"
+            )
             log.info(f"Umbral cargado ({metodo}): {umbral:.10f}")
             if "mean" in umbral_data and "std" in umbral_data:
                 log.info(
