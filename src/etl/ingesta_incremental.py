@@ -13,6 +13,8 @@ generado con --csv o la carpeta del checkout con --input-dir.
 
 import argparse
 import os
+import sys
+import subprocess
 import logging
 import shutil
 import time
@@ -358,32 +360,39 @@ def ejecutar_pipeline_actualizaciones():
         log.error(f"   ❌ Error en Isolation Forest: {e}", exc_info=True)
 
     log.info("\n➡️ [5/7] Calculando Anomalías (Autoencoder LSTM)...")
+    # El Autoencoder usa TensorFlow. PyTorch (sentence-transformers, paso 6)
+    # no puede coexistir en el mismo proceso con TF una vez que este
+    # se ha inicializado — colisión de memory allocators → segfault.
+    # Solución: ejecutar cada uno en su propio subproceso Python.
+    ae_script = Path(__file__).resolve().parent.parent / "ml" / "anomalias_autoencoder.py"
     try:
-        import anomalias_autoencoder
-
-        anomalias_autoencoder.ejecutar()
-        log.info("   ✅ Autoencoder LSTM completado.")
+        result = subprocess.run(
+            [sys.executable, str(ae_script)],
+            check=False,  # no propaga el error para no abortar el pipeline
+        )
+        if result.returncode == 0:
+            log.info("   ✅ Autoencoder LSTM completado.")
+        else:
+            log.error(f"   ❌ Autoencoder LSTM terminó con código {result.returncode}")
     except Exception as e:
-        log.error(f"   ❌ Error en Autoencoder LSTM: {e}", exc_info=True)
+        log.error(f"   ❌ Error al lanzar Autoencoder LSTM: {e}", exc_info=True)
 
     # 5. NLP Equivalencias
-    # NOTA: gc.collect() antes del paso NLP es importante — libera tensores
-    # y objetos de TensorFlow (paso 5) antes de que PyTorch (sentence-transformers)
-    # empiece a cargar su propio runtime. La fix principal es que TF se importa
-    # de forma diferida (no al nivel de módulo), pero el gc.collect() añade
-    # una capa extra de protección ante la presión de memoria en GitHub Actions.
-    import gc
-    gc.collect()
-
+    # Se ejecuta en subproceso separado para tener memoria completamente limpia:
+    # sin ningún residuo del runtime de TensorFlow cargado en el paso anterior.
     log.info("\n➡️ [6/7] Generando Equivalencias NLP (Embeddings)...")
+    nlp_script = Path(__file__).resolve().parent.parent / "ml" / "nlp_embeddings.py"
     try:
-        import nlp_embeddings
-
-        nlp_embeddings.ejecutar()
-        gc.collect()
-        log.info("   ✅ Equivalencias NLP completadas.")
+        result = subprocess.run(
+            [sys.executable, str(nlp_script)],
+            check=False,
+        )
+        if result.returncode == 0:
+            log.info("   ✅ Equivalencias NLP completadas.")
+        else:
+            log.error(f"   ❌ Equivalencias NLP terminó con código {result.returncode}")
     except Exception as e:
-        log.error(f"   ❌ Error en Equivalencias NLP: {e}", exc_info=True)
+        log.error(f"   ❌ Error al lanzar Equivalencias NLP: {e}", exc_info=True)
 
     # 6. Predicciones (XGBoost)
     log.info("\n➡️ [7/7] Generando Predicciones (XGBoost)...")
