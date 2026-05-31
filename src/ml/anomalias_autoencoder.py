@@ -26,16 +26,13 @@ Arquitectura:
   Entrenado con MSE sobre secuencias normales (precio sin cambio).
 """
 
+import zipfile
 import numpy as np
 import pandas as pd
 import logging
 import joblib
 import matplotlib.pyplot as plt
 from pathlib import Path
-
-from tensorflow.keras.models import Model, load_model
-from tensorflow.keras.layers import Input, LSTM, Dense, RepeatVector, TimeDistributed
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s — %(message)s")
 log = logging.getLogger(__name__)
@@ -155,7 +152,7 @@ def construir_secuencias(df: pd.DataFrame, solo_normales: bool = False):
 
 
 # ── Arquitectura del Autoencoder LSTM ────────────────────────────────────────
-def construir_modelo(ventana: int, n_features: int) -> Model:
+def construir_modelo(ventana: int, n_features: int):
     """
     Autoencoder LSTM para series temporales.
 
@@ -173,6 +170,9 @@ def construir_modelo(ventana: int, n_features: int) -> Model:
       LSTM(64, return_sequences=True) → expande a resolución original
       TimeDistributed(Dense(n_features)) → reconstruye cada paso temporal
     """
+    from tensorflow.keras.models import Model
+    from tensorflow.keras.layers import Input, LSTM, Dense, RepeatVector, TimeDistributed
+
     inputs = Input(shape=(ventana, n_features), name="input_secuencia")
 
     # Encoder
@@ -206,6 +206,8 @@ def entrenar(X_train: np.ndarray) -> tuple:
 
     modelo = construir_modelo(VENTANA, N_FEATURES)
     modelo.summary(print_fn=log.info)
+
+    from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 
     callbacks = [
         EarlyStopping(
@@ -393,16 +395,41 @@ def guardar(df: pd.DataFrame) -> None:
 
 
 # ── Cargar modelo pre-entrenado ───────────────────────────────────────────────
+def _es_keras_valido(ruta: Path) -> bool:
+    """
+    Comprueba que el fichero .keras es un ZIP real y no un puntero LFS.
+    Un puntero LFS es un fichero de texto de ~130 bytes que no puede
+    abrirse como ZIP. Intentar cargarlo con load_model() lanza un ValueError
+    que corrompe el estado interno de TensorFlow, causando un segfault en
+    los módulos que se importen a continuación (ej. sentence-transformers).
+    """
+    try:
+        with zipfile.ZipFile(ruta, "r") as _:
+            return True
+    except (zipfile.BadZipFile, OSError):
+        return False
+
+
 def cargar_modelo_pretrained() -> tuple:
     """
     Carga un modelo ya entrenado (ej. desde Google Colab) y su umbral.
-    Devuelve (modelo, umbral) o (None, None) si no existen.
+    Devuelve (modelo, umbral) o (None, None) si no existen o el fichero
+    no es un .keras válido (ej. puntero LFS sin Git LFS instalado).
 
     Compatible con ambos formatos de umbral:
       - dict con {umbral, mean, std, n_sigmas} (nuevo formato)
       - float simple (formato legacy)
     """
+    from tensorflow.keras.models import load_model  # import diferido: solo si se usa
+
     if MODEL_PATH.exists() and UMBRAL_PATH.exists():
+        if not _es_keras_valido(MODEL_PATH):
+            log.warning(
+                f"   {MODEL_PATH} existe pero no es un ZIP .keras válido "
+                "(¿puntero LFS sin descargar?). Se re-entrenará el modelo."
+            )
+            return None, None
+
         log.info(f"Modelo pre-entrenado encontrado: {MODEL_PATH}")
         modelo = load_model(MODEL_PATH)
         umbral_data = joblib.load(UMBRAL_PATH)

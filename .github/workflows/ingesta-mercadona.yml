@@ -23,6 +23,7 @@ jobs:
           path: mercaintelligence
           token: ${{ secrets.PAT_TOKEN }}
           fetch-depth: 0 # Es importante mantener el 0 para tener el histórico al sincronizar
+          lfs: true # Necesario para descargar modelos .keras y .pkl almacenados en Git LFS
 
       - name: Checkout WebScraping_Mercadona
         uses: actions/checkout@v4
