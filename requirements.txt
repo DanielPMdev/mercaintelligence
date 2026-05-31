@@ -7,3 +7,10 @@ elasticsearch>=7.0.0,<8.0.0
 requests
 watchdog
 gunicorn
+matplotlib
+joblib
+scikit-learn
+xgboost
+shap
+sentence-transformers
+tensorflow-cpu
