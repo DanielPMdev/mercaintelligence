@@ -309,7 +309,6 @@ def ejecutar_pipeline_actualizaciones():
     start_time = time.time()
 
     # 1. Configurar sys.path dinámicamente para imports correctos
-    import sys
     from pathlib import Path
 
     src_dir = Path(__file__).resolve().parent.parent
@@ -364,7 +363,9 @@ def ejecutar_pipeline_actualizaciones():
     # no puede coexistir en el mismo proceso con TF una vez que este
     # se ha inicializado — colisión de memory allocators → segfault.
     # Solución: ejecutar cada uno en su propio subproceso Python.
-    ae_script = Path(__file__).resolve().parent.parent / "ml" / "anomalias_autoencoder.py"
+    ae_script = (
+        Path(__file__).resolve().parent.parent / "ml" / "anomalias_autoencoder.py"
+    )
     try:
         result = subprocess.run(
             [sys.executable, str(ae_script)],
