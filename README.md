@@ -3,8 +3,11 @@
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+[![Cloudflare Pages](https://img.shields.io/badge/Cloudflare_Pages-Demo-F38020?logo=cloudflare&logoColor=white)](https://mercaintelligence.pages.dev/)
 
 **Plataforma de inteligencia de precios sobre el catálogo de Mercadona con scraping diario, ML/DL, NLP y visualización en tiempo real.**
+
+🌐 **Demo en vivo:** [https://mercaintelligence.pages.dev/](https://mercaintelligence.pages.dev/)
 
 ---
 
@@ -163,6 +166,13 @@ El sistema incluye 6 perfiles predefinidos (familiar, estudiante, vegano, deport
 ---
 
 ## 🚀 Instalación y uso
+
+### 🌐 Demo en vivo
+
+El frontend está desplegado y listo para probar en:  
+👉 **[https://mercaintelligence.pages.dev/](https://mercaintelligence.pages.dev/)**
+
+---
 
 ### Opción A — Docker (recomendado)
 
