@@ -33,9 +33,16 @@ import logging
 import joblib
 import matplotlib.pyplot as plt
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, LSTM, Dense, RepeatVector, TimeDistributed
+# IMPORTANTE: TensorFlow NO se importa al nivel de módulo.
+# Importarlo aquí inicializa su runtime en memoria, lo que causa un segfault
+# cuando sentence-transformers (PyTorch) se carga en el mismo proceso justo
+# después, en el paso NLP del pipeline. Los imports de TF son diferidos:
+# se hacen dentro de cada función que los necesita.
+if TYPE_CHECKING:
+    # Solo para el linter/IDE — nunca se ejecuta en tiempo de ejecución
+    from tensorflow.keras.models import Model
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s — %(message)s")
 log = logging.getLogger(__name__)
@@ -157,7 +164,7 @@ def construir_secuencias(df: pd.DataFrame, solo_normales: bool = False):
 
 
 # ── Arquitectura del Autoencoder LSTM ────────────────────────────────────────
-def construir_modelo(ventana: int, n_features: int):
+def construir_modelo(ventana: int, n_features: int) -> "Model":
     """
     Autoencoder LSTM para series temporales.
 
@@ -175,6 +182,8 @@ def construir_modelo(ventana: int, n_features: int):
       LSTM(64, return_sequences=True) → expande a resolución original
       TimeDistributed(Dense(n_features)) → reconstruye cada paso temporal
     """
+    from tensorflow.keras.models import Model
+    from tensorflow.keras.layers import Input, LSTM, Dense, RepeatVector, TimeDistributed
 
     inputs = Input(shape=(ventana, n_features), name="input_secuencia")
 
@@ -290,7 +299,7 @@ def guardar_graficas_entrenamiento(history, X_train, modelo):
 
 
 # ── Detección en todo el histórico ───────────────────────────────────────────
-def detectar_anomalias(df: pd.DataFrame, modelo: Model, umbral: float) -> pd.DataFrame:
+def detectar_anomalias(df: pd.DataFrame, modelo: Any, umbral: float) -> pd.DataFrame:
     """
     Aplica el modelo sobre TODAS las secuencias (normales y anómalas).
     Calcula el error de reconstrucción y lo compara con el umbral.
