@@ -52,10 +52,15 @@ jobs:
           elif [ -n "${{ inputs.csv_name }}" ]; then
             CSV="scraper/data/${{ inputs.csv_name }}"
           else
-            CSV=$(ls -t scraper/data/*_Mercadona_*.csv | head -n 1)
+            CSV=$(ls -t scraper/data/*_Mercadona_*.csv 2>/dev/null | head -n 1)
           fi
 
-          test -f "$CSV"
+          if [ -z "$CSV" ]; then
+            echo "Error: No CSV file found in scraper/data/"
+            exit 1
+          fi
+
+          test -f "$CSV" || { echo "Error: CSV file not found at $CSV"; exit 1; }
           echo "csv_path=$CSV" >> "$GITHUB_OUTPUT"
           echo "CSV seleccionado: $CSV"
 
