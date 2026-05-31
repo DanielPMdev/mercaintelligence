@@ -111,7 +111,14 @@ mercaintelligence/
 │   ├── clustering/                # Resultados de segmentación K-Means
 │   ├── catalogo/                  # Productos nuevos y descatalogados
 │   └── shrinkflation/             # Alertas de reduflación
-├── models/                        # Modelos entrenados (.pkl y .keras)
+├── models/                        # Modelos entrenados (.pkl y .keras) — vía Git LFS
+│   ├── autoencoder_lstm.keras         # Autoencoder LSTM (detección anomalías DL)
+│   ├── lstm_clasificador.keras        # LSTM clasificador (predicción cambio precio)
+│   ├── isolation_forest.pkl           # Isolation Forest (detección anomalías ML)
+│   ├── xgboost_precio.pkl             # XGBoost regresor de precio futuro
+│   ├── xgboost_encoders.pkl           # Encoders de categorías para XGBoost
+│   ├── lstm_scaler.pkl                # Scaler de entrada del LSTM
+│   └── ae_umbral.pkl                  # Umbral P99 del Autoencoder (reconstrucción)
 ├── src/
 │   ├── etl/                       # Pipeline ETL: ingesta, consolidación, indexación
 │   │   ├── consolidar_historico.py        # Construcción inicial del parquet maestro
@@ -179,6 +186,7 @@ El frontend está desplegado y listo para probar en:
 ```bash
 git clone https://github.com/DanielPMdev/mercaintelligence.git
 cd mercaintelligence
+git lfs pull          # descarga los modelos binarios (Git LFS)
 docker-compose up -d
 ```
 
@@ -193,10 +201,13 @@ docker-compose up -d
 
 ### Opción B — Desarrollo local
 
+> ⚠️ **Modelos binarios (Git LFS):** el repositorio usa [Git LFS](https://git-lfs.com/) para almacenar los modelos `.keras` y `.pkl`. Si `git clone` no los descarga automáticamente, ejecuta `git lfs pull` dentro del directorio clonado.
+
 ```bash
 # 1. Clonar y crear entorno
 git clone https://github.com/DanielPMdev/mercaintelligence.git
 cd mercaintelligence
+git lfs pull          # descarga autoencoder_lstm.keras, lstm_clasificador.keras, etc.
 python -m venv .venv
 .venv\Scripts\activate       # Windows
 # source .venv/bin/activate  # Linux/macOS
