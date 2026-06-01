@@ -96,8 +96,28 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          # huggingface-cli fue deprecado en huggingface_hub>=1.0; ahora se usa 'hf'
           pip install "huggingface_hub>=1.0"
 
           # Subir la aplicación y datos de manera directa vía API HTTP
-          hf upload danielpmdev/mercaintelligence-backend . --repo-type=space --token=$HF_TOKEN --delete="*" --exclude=".git/*" --exclude=".github/*" --exclude="frontend/*" --exclude="notebooks/*" --exclude="dashboards/*" --exclude="docs/*" --exclude="*.ipynb" --exclude="**/__pycache__/*" --exclude="*.pyc"
+          # Excluimos README.md para conservar la configuración del Space y los archivos de despliegue locales
+          hf upload danielpmdev/mercaintelligence-backend . --repo-type=space --token=$HF_TOKEN --delete="*" \
+            --exclude=".git/*" \
+            --exclude=".github/*" \
+            --exclude="frontend/*" \
+            --exclude="notebooks/*" \
+            --exclude="dashboards/*" \
+            --exclude="docs/*" \
+            --exclude="*.ipynb" \
+            --exclude="**/__pycache__/*" \
+            --exclude="*.pyc" \
+            --exclude="README.md" \
+            --exclude="docker-compose.yml" \
+            --exclude="nginx.conf" \
+            --exclude="Dockerfile.api" \
+            --exclude="Dockerfile.frontend" \
+            --exclude="DESPLEGAR.md" \
+            --exclude="pyproject.toml" \
+            --exclude="scratch/*" \
+            --exclude=".dockerignore" \
+            --exclude=".gitignore" \
+            --exclude=".gitattributes"
