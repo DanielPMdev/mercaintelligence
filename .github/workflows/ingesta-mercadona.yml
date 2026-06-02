@@ -98,8 +98,21 @@ jobs:
         run: |
           pip install "huggingface_hub>=1.0"
 
+          # Generar dinámicamente el README.md con la cabecera YAML requerida por Hugging Face Spaces
+          cat << 'EOF' | sed 's/^          //' > README.md
+          ---
+          title: Mercaintelligence Backend
+          emoji: 🏆
+          colorFrom: yellow
+          colorTo: purple
+          sdk: docker
+          pinned: false
+          ---
+
+          Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
+          EOF
+
           # Subir la aplicación y datos de manera directa vía API HTTP
-          # Excluimos README.md para conservar la configuración del Space y los archivos de despliegue locales
           hf upload danielpmdev/mercaintelligence-backend . --repo-type=space --token=$HF_TOKEN --delete="*" \
             --exclude=".git/*" \
             --exclude=".github/*" \
@@ -110,7 +123,6 @@ jobs:
             --exclude="*.ipynb" \
             --exclude="**/__pycache__/*" \
             --exclude="*.pyc" \
-            --exclude="README.md" \
             --exclude="docker-compose.yml" \
             --exclude="nginx.conf" \
             --exclude="Dockerfile.api" \
