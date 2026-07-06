@@ -607,6 +607,22 @@ Los Clusters 0 y 2 muestran perfiles gruesos y simétricos (buena cohesión). El
 
 ---
 
+## 🔮 Mejoras a futuro
+
+### MultiSupermarketIntelligence
+> **"Extensión de MercaIntelligence a Carrefour, Lidl y Mercadona con comparativa en tiempo real"**
+>
+> La evolución natural de este proyecto:
+> - **Scraping multitienda:** Añadir scrapers para otros supermercados.
+> - **Unificación de catálogos:** Unificar el catálogo mediante NLP (el mismo producto tiene nombres distintos en cada cadena).
+> - **Comparador en tiempo real:** Construir un comparador de precios en tiempo real.
+> - **Asistente conversacional:** Añadir un agente conversacional que responda a la pregunta: *"¿dónde compro más barato mi cesta esta semana?"*.
+>
+> * **Por qué es fuerte:** ya se cuenta con la infraestructura base, el riesgo técnico es bajo y el producto final tiene un alto potencial de usuarios reales, con vías claras de monetización.
+> * **Tecnologías a incorporar:** *record linkage* entre catálogos (*entity resolution*), Kafka para scraping en paralelo y LLMs para el agente conversacional.
+
+---
+
 ## 👤 Autor
 
 **Daniel Porras Morales**  
